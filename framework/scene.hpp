@@ -28,6 +28,7 @@ private:
     void loadmaterial(std::istringstream& line_as_stream);
     void loadshape(std::istringstream& line_as_stream);
     void loadlight(std::istringstream& line_as_stream);
+    Color compute_sekundaerstrahlen(HitPoint const& hit_point) const;
     unsigned int x_res_ = 0, y_res_ = 0;
     std::string output_file_ = "";
     std::string file_name_;

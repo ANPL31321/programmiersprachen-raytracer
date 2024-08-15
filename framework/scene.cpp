@@ -105,9 +105,7 @@ void Scene::loadlight(std::istringstream& line_as_stream) {
     line_as_stream >> lightsource.color.g;
     line_as_stream >> lightsource.color.b;
 
-    line_as_stream >> lightsource.brightness.r;
-    line_as_stream >> lightsource.brightness.g;
-    line_as_stream >> lightsource.brightness.b;
+    line_as_stream >> lightsource.brightness;
 
     punktlichtquellen_.push_back(std::make_shared<Punktlichquelle>(lightsource));
 }
@@ -174,15 +172,49 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
     Pixel p{ x, y };
 
     for (auto shape : shapes_) {
+        //shape->print(std::cout);
         HitPoint hit_point = shape->intersect(ray);
         if (hit_point.success) {
-            p.color = Color{ hit_point.normale.x, hit_point.normale.y, hit_point.normale.z }; // change because the Law of Demeter
+            if (hit_point.normale.z < 0) {
+                std::cout << hit_point.normale.z << std::endl;
+            }
+            p.color = compute_sekundaerstrahlen(hit_point);
             return p;
         }
     }
 
     p.color = Color{ 0.0f, 0.0f, 0.0f };
     return p;
+}
+
+Color Scene::compute_sekundaerstrahlen(HitPoint const& hit_point) const {
+    // for now ignore shadow and reflection (later probably use reqursion)
+    // for now there is only one light source
+    Color intensity{ 0.0f, 0.0f, 0.0f };
+    for (auto light_source : punktlichtquellen_) {
+        Ray ray = norm(Ray{ hit_point.intersection_point, {light_source->position.x - hit_point.intersection_point.x, light_source->position.y - hit_point.intersection_point.y, light_source->position.z - hit_point.intersection_point.z} }); // LoD!!!!
+        bool intersection = false;
+        for (auto shape : shapes_) {
+            HitPoint hit_point = shape->intersect(ray);
+            if (hit_point.success) {
+                intersection = true;
+                //std::cout << hit_point.distance << std::endl;
+                break;
+            }
+        }
+        if (intersection) {
+            //std::cout << ray.direction.x << std::endl;
+        }
+        if (!intersection) {
+            // LoD!!!
+            float scalar_product = hit_point.normale.x * ray.direction.x + 
+                hit_point.normale.y * ray.direction.y + hit_point.normale.z * ray.direction.z;
+            intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+            intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+            intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+        }
+        return intensity;
+    }
 }
 
 unsigned int Scene::get_x_res() {
