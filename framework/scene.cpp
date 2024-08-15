@@ -47,7 +47,7 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
         std::string name_of_material;
         glm::vec3 center;
         float radius;
-        
+
         line_as_stream >> name;
         line_as_stream >> center.x;
         line_as_stream >> center.y;
@@ -57,8 +57,8 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
 
         auto material = materials_.find(name_of_material);
         if (material == materials_.end()) {
-           std::cout << "Material " << name_of_material << " not found" << std::endl;
-           return;
+            std::cout << "Material " << name_of_material << " not found" << std::endl;
+            return;
         }
         shapes_.push_back(std::make_shared<Sphere>(Sphere{ name, material->second, center, radius }));
         shapes_.back()->print(std::cout);
@@ -95,7 +95,7 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
 void Scene::loadlight(std::istringstream& line_as_stream) {
     Punktlichquelle lightsource{ "", glm::vec3{0.0f, 0.0f, 0.0f}, Color{0.0f, 0.0f, 0.0f} };
     line_as_stream >> lightsource.name;
-    
+
     line_as_stream >> lightsource.position.x;
     line_as_stream >> lightsource.position.y;
     line_as_stream >> lightsource.position.z;
@@ -161,7 +161,37 @@ void Scene::loadscene() {
     sdf_file.close();
 }
 
-Scene::Scene(std::string const& file_name):
-	file_name_{file_name} {
+Scene::Scene(std::string const& file_name) :
+    file_name_{ file_name } {
     loadscene();
+    distance_to_screen_ = -(x_res_ / 2.0f) / tan(camera_.fov_x / 2.0f);
+}
+
+Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
+    Ray ray = norm(Ray{ camera_.positon, glm::vec3{(float)x - x_res_ / 2.0f, (float)y - y_res_ / 2.0f, distance_to_screen_} });
+
+    Pixel p{ x, y };
+
+    for (auto shape : shapes_) {
+        HitPoint hit_point = shape->intersect(ray);
+        if (hit_point.success) {
+            p.color = Color{ hit_point.material_intersected_->ka_ }; // change because the Law of Demeter
+            return p;
+        }
+    }
+
+    p.color = Color{ 0.0f, 0.0f, 0.0f };
+    return p;
+}
+
+unsigned int Scene::get_x_res() {
+    return x_res_;
+}
+
+unsigned int Scene::get_y_res() {
+    return y_res_;
+}
+
+std::string const& Scene::get_output_file() {
+    return output_file_;
 }
