@@ -12,6 +12,7 @@
 // streaming them into our Material Variables
 #include <sstream>
 #include "map"
+#include <numbers>
 
 
 void Scene::loadmaterial(std::istringstream& line_as_stream) {
@@ -164,7 +165,7 @@ void Scene::loadscene() {
 Scene::Scene(std::string const& file_name) :
     file_name_{ file_name } {
     loadscene();
-    distance_to_screen_ = -(x_res_ / 2.0f) / tan(camera_.fov_x / 2.0f);
+    distance_to_screen_ = -(x_res_ / 2.0f) / tan((camera_.fov_x / 2.0f) * std::numbers::pi / 180);
 }
 
 Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
@@ -175,7 +176,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
     for (auto shape : shapes_) {
         HitPoint hit_point = shape->intersect(ray);
         if (hit_point.success) {
-            p.color = Color{ hit_point.material_intersected_->ka_ }; // change because the Law of Demeter
+            p.color = Color{ hit_point.normale.x, hit_point.normale.y, hit_point.normale.z }; // change because the Law of Demeter
             return p;
         }
     }
