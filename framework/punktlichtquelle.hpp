@@ -9,7 +9,7 @@ struct Punktlichquelle {
 	std::string name;
 	glm::vec3 position;
 	Color color;
-	float brightness;
+	Color brightness;
 };
 
 #endif
