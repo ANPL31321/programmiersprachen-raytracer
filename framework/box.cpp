@@ -25,6 +25,7 @@ std::ostream& Box::print(std::ostream& os) const {
 HitPoint Box::intersect(Ray const& ray) const {
 	bool success = false;
 	float t_min = -1;
+	glm::vec3 normale{0.0f, 0.0f, 0.0f};
 	glm::vec3 intersection_point;
 	float x = min_.x;
 	float t = (x - ray.origin.x) / ray.direction.x;
@@ -35,6 +36,7 @@ HitPoint Box::intersect(Ray const& ray) const {
 			t_min = t;
 			intersection_point = glm::vec3{ x, y, z };
 			success = true;
+			normale = { -1.0f, 0.0f, 0.0f };
 		}
 	}
 
@@ -47,6 +49,7 @@ HitPoint Box::intersect(Ray const& ray) const {
 			t_min = t;
 			intersection_point = glm::vec3{ x, y, z };
 			success = true;
+			normale = { 1.0f, 0.0f, 0.0f };
 		}
 	}
 
@@ -59,6 +62,7 @@ HitPoint Box::intersect(Ray const& ray) const {
 			t_min = t;
 			intersection_point = glm::vec3{ x, y, z };
 			success = true;
+			normale = { 0.0f, -1.0f, 0.0f };
 		}
 	}
 
@@ -71,6 +75,7 @@ HitPoint Box::intersect(Ray const& ray) const {
 			t_min = t;
 			intersection_point = glm::vec3{ x, y, z };
 			success = true;
+			normale = { 0.0f, 1.0f, 0.0f };
 		}
 	}
 
@@ -83,6 +88,7 @@ HitPoint Box::intersect(Ray const& ray) const {
 			t_min = t;
 			intersection_point = glm::vec3{ x, y, z };
 			success = true;
+			normale = { 0.0f, 0.0f, -1.0f };
 		}
 	}
 
@@ -95,8 +101,9 @@ HitPoint Box::intersect(Ray const& ray) const {
 			t_min = t;
 			intersection_point = glm::vec3{ x, y, z };
 			success = true;
+			normale = { 0.0f, 0.0f, 1.0f };
 		}
 	}
 
-	return HitPoint { success, t_min, Shape::name_, Shape::material_, intersection_point, ray.direction };
+	return HitPoint { success, t_min, Shape::name_, Shape::material_, intersection_point, ray.direction, normale };
 }

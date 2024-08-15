@@ -13,6 +13,7 @@ struct HitPoint {
     std::shared_ptr<Material> material_intersected_;
 	glm::vec3 intersection_point;
 	glm::vec3 ray_direction;
+	glm::vec3 normale;
 };
 
 #endif

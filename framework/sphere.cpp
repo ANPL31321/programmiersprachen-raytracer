@@ -24,10 +24,12 @@ std::ostream& Sphere::print(std::ostream& os) const {
 }
 
 HitPoint Sphere::intersect(Ray const& ray) const {
-	HitPoint hit_point{ false, 0.0f, Shape::name_, Shape::material_, {0.0f, 0.0f, 0.0f}, ray.direction };
+	HitPoint hit_point{ false, 0.0f, Shape::name_, Shape::material_, {0.0f, 0.0f, 0.0f}, ray.direction, {0.0f, 0.0f, 0.0f} };
 	hit_point.success = glm::intersectRaySphere(ray.origin, ray.direction, center_,
 		radius_ * radius_, hit_point.distance);
-	hit_point.intersection_point = ray.origin + hit_point.distance * ray.direction;
+	glm::vec3 intersection_point = ray.origin + hit_point.distance * ray.direction;
+	hit_point.intersection_point = intersection_point;
+	hit_point.normale = norm(glm::vec3{intersection_point.x - center_.x, intersection_point.y - center_.y, intersection_point.z - center_.z});
 	return hit_point;
 }
 
