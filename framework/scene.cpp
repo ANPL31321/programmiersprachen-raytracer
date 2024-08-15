@@ -92,6 +92,25 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
     }
 }
 
+void Scene::loadlight(std::istringstream& line_as_stream) {
+    Punktlichquelle lightsource{ "", glm::vec3{0.0f, 0.0f, 0.0f}, Color{0.0f, 0.0f, 0.0f} };
+    line_as_stream >> lightsource.name;
+    
+    line_as_stream >> lightsource.position.x;
+    line_as_stream >> lightsource.position.y;
+    line_as_stream >> lightsource.position.z;
+
+    line_as_stream >> lightsource.color.r;
+    line_as_stream >> lightsource.color.g;
+    line_as_stream >> lightsource.color.b;
+
+    line_as_stream >> lightsource.brightness.r;
+    line_as_stream >> lightsource.brightness.g;
+    line_as_stream >> lightsource.brightness.b;
+
+    punktlichtquellen_.push_back(std::make_shared<Punktlichquelle>(lightsource));
+}
+
 void Scene::loadscene() {
     std::ifstream sdf_file(file_name_);
     if (!sdf_file.is_open()) {
@@ -111,9 +130,27 @@ void Scene::loadscene() {
             else if ("shape" == token) {
                 loadshape(line_as_stream);
             }
+            else if ("ambient" == token) {
+                line_as_stream >> ambient_.r;
+                line_as_stream >> ambient_.g;
+                line_as_stream >> ambient_.b;
+            }
+            else if ("light" == token) {
+                loadlight(line_as_stream);
+            }
+            else if ("camera" == token) {
+                line_as_stream >> camera_.name;
+                line_as_stream >> camera_.fov_x;
+            }
             else {
                 std::cout << "Unexpected keyword: " << token << std::endl;
             }
+        }
+        else if ("render" == token) {
+            line_as_stream >> token;
+            line_as_stream >> output_file_;
+            line_as_stream >> x_res_;
+            line_as_stream >> y_res_;
         }
         else {
             std::cout << "Unexpected keyword: " << token << std::endl;
@@ -124,11 +161,7 @@ void Scene::loadscene() {
     sdf_file.close();
 }
 
-Scene::Scene(int x_res, int y_res, std::string const& file_name, Camera const& camera, Color const& ambient):
-	x_res_{ x_res },
-	y_res_{ y_res },
-	file_name_{file_name},
-	camera_{ camera },
-	ambient_{ ambient } {
+Scene::Scene(std::string const& file_name):
+	file_name_{file_name} {
     loadscene();
 }

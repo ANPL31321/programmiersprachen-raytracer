@@ -231,7 +231,7 @@ std::shared_ptr<Material> search_by_name_vector(std::string name,std::vector<std
 
 TEST_CASE("searching","[searching]"){
     std::string filename = "D:/LEGION/VisualStudioProjects/programmiersprachen-raytracer/source/materials.sdf";
-    Scene scene{ 800, 600, filename, Camera{""}, Color{1.0f, 1.0f, 1.0f} };
+    Scene scene{filename};
     std::vector<std::shared_ptr<Material>> material_vector;
     std::set<std::shared_ptr<Material>> material_set;
     std::map<std::string, std::shared_ptr<Material>> material_map;
@@ -255,7 +255,7 @@ TEST_CASE("searching","[searching]"){
 
 int main(int argc, char* argv[]){
     std::string filename = "D:/LEGION/VisualStudioProjects/programmiersprachen-raytracer/source/materials.sdf";
-    Scene scene{ 800, 600, filename, Camera{""}, Color{1.0f, 1.0f, 1.0f} };
+    Scene scene{filename};
     return Catch::Session().run(argc, argv);
 }
 
