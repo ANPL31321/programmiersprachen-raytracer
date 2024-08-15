@@ -9,5 +9,6 @@ struct Ray {
 };
 
 Ray norm(Ray const& ray);
+glm::vec3 norm(glm::vec3 const& vec);
 
 #endif

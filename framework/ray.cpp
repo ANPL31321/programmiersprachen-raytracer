@@ -3,8 +3,12 @@
 #include <iostream>
 
 Ray norm(Ray const& ray) {
-	float length = std::sqrt(ray.direction.x * ray.direction.x + ray.direction.y * ray.direction.y +
-		ray.direction.z * ray.direction.z);
-	Ray ret_ray{ ray.origin, {ray.direction.x / length, ray.direction.y / length, ray.direction.z / length} };
+	Ray ret_ray{ ray.origin, norm(ray.direction)};
 	return ret_ray;
+}
+
+glm::vec3 norm(glm::vec3 const& vec) {
+	float length = std::sqrt(vec.x * vec.x + vec.y * vec.y +
+		vec.z * vec.z);
+	return glm::vec3{ vec.x / length, vec.y / length, vec.z / length };
 }
