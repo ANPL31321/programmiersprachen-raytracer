@@ -11,7 +11,7 @@
 //now single threaded again
 int main(int argc, char* argv[])
 {
-    Scene scene{ "D:/LEGION/VisualStudioProjects/programmiersprachen-raytracer/source/materials.sdf" };
+    Scene scene{ "C:/Users/Polina/Desktop/new_folder/programmiersprachen-raytracer/source/materials.sdf" };
     unsigned const image_width = scene.get_x_res();
     unsigned const image_height = scene.get_y_res();
     std::string const filename = "./" + scene.get_output_file();

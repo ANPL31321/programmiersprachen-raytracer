@@ -8,7 +8,7 @@ Shape::Shape(std::string const& name, std::shared_ptr<Material> const& material)
 
 std::ostream& Shape::print(std::ostream& os) const {
 	return os << "Name: " << name_ << "\n" <<
-		"Material: " << material_;
+		"Material: " << (*material_);
 }
 
 std::ostream& operator<<(std::ostream& os, Shape const& s) {

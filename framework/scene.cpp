@@ -13,6 +13,10 @@
 #include <sstream>
 #include "map"
 #include <numbers>
+#include "sphere.hpp"
+#include "glm/gtx/intersect.hpp"
+#include <limits>
+
 
 
 void Scene::loadmaterial(std::istringstream& line_as_stream) {
@@ -157,6 +161,11 @@ void Scene::loadscene() {
 
     }
 
+    for (auto shape : shapes_) {
+
+        shape->print(std::cout);
+    }
+
     sdf_file.close();
 }
 
@@ -167,7 +176,10 @@ Scene::Scene(std::string const& file_name) :
 }
 
 Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
-    Ray ray = norm(Ray{ camera_.positon, glm::vec3{(float)x - x_res_ / 2.0f, (float)y - y_res_ / 2.0f, distance_to_screen_} });
+    Ray ray = norm(Ray{ camera_.position,
+                        glm::vec3{(float)x - x_res_ / 2.0f,
+                                  (float)y - y_res_ / 2.0f,
+                                  distance_to_screen_} - camera_.position });
 
     Pixel p{ x, y };
 
@@ -175,10 +187,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
         //shape->print(std::cout);
         HitPoint hit_point = shape->intersect(ray);
         if (hit_point.success) {
-            if (hit_point.normale.z < 0) {
-                std::cout << hit_point.normale.z << std::endl;
-            }
-            p.color = compute_sekundaerstrahlen(hit_point);
+            p.color = compute_secondary_rays(hit_point);
             return p;
         }
     }
@@ -187,9 +196,31 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
     return p;
 }
 
-Color Scene::compute_sekundaerstrahlen(HitPoint const& hit_point) const {
+
+Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
     // for now ignore shadow and reflection (later probably use reqursion)
     // for now there is only one light source
+
+    Color final_intensity{ 0.0f, 0.0f, 0.0f };
+    for (auto light_source : punktlichtquellen_) {
+        Color intensity{ 0.0f, 0.0f, 0.0f };
+        Ray ray = norm(Ray{light_source->position,
+                           (norm(light_source->position)-norm(hit_point.intersection_point))}); //вычисляем вектор от источника до точки пересечения луча камеру и объекта
+        float scalar_product = glm::dot(hit_point.normale, ray.direction);//считаем скалярное произведение между нормалью в этой точке и
+            if (scalar_product>0) {
+                intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+                intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+                intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+            }
+            final_intensity+=intensity;
+    }
+    return final_intensity;
+}
+
+/*Color Scene::compute_secondary_rays(HitPoint const& hit_point) const {
+    // for now ignore shadow and reflection (later probably use reqursion)
+    // for now there is only one light source
+    Color final_intensity{ 0.0f, 0.0f, 0.0f };
     Color intensity{ 0.0f, 0.0f, 0.0f };
     for (auto light_source : punktlichtquellen_) {
         Ray ray = norm(Ray{ hit_point.intersection_point, {light_source->position.x - hit_point.intersection_point.x, light_source->position.y - hit_point.intersection_point.y, light_source->position.z - hit_point.intersection_point.z} }); // LoD!!!!
@@ -207,15 +238,19 @@ Color Scene::compute_sekundaerstrahlen(HitPoint const& hit_point) const {
         }
         if (!intersection) {
             // LoD!!!
-            float scalar_product = hit_point.normale.x * ray.direction.x + 
-                hit_point.normale.y * ray.direction.y + hit_point.normale.z * ray.direction.z;
+            float scalar_product = hit_point.normale.x * ray.direction.x +
+                                   hit_point.normale.y * ray.direction.y + hit_point.normale.z * ray.direction.z;
             intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
             intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
             intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
         }
-        return intensity;
+        final_intensity+=intensity;
     }
-}
+    return final_intensity;
+}*/
+
+
+
 
 unsigned int Scene::get_x_res() {
     return x_res_;

@@ -12,7 +12,7 @@
 Renderer::Renderer(unsigned w, unsigned h, std::string const& file, Scene const& scene)
     : width_(w)
     , height_(h)
-    , color_buffer_(w* h, Color{ 0.0, 0.0, 0.0 })
+    , color_buffer_(w*h, Color{ 0.0, 0.0, 0.0 })
     , filename_(file)
     , ppm_(width_, height_),
     scene_{ scene }
@@ -39,6 +39,7 @@ void Renderer::render()
 
 void Renderer::write(Pixel const& p)
 {
+    //make sense to use exception throw
     // flip pixels, because of opengl glDrawPixels
     size_t buf_pos = (width_*p.y + p.x);
     if (buf_pos >= color_buffer_.size() || (int)buf_pos < 0) {
@@ -46,9 +47,11 @@ void Renderer::write(Pixel const& p)
             << "pixel out of ppm_ : "
             << (int)p.x << "," << (int)p.y
             << std::endl;
+
     } else {
         color_buffer_[buf_pos] = p.color;
-    }
 
+    }
     ppm_.write(p);
+
 }

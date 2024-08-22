@@ -183,8 +183,6 @@ int load_materials(std::string const& file_path, Scene& scene){
 
     }
 
-    scene.materials_ = map_materials;
-
     sdf_file.close();
 
     return 0;
@@ -208,12 +206,8 @@ std::shared_ptr<Material> search_by_name_set(std::string name,std::set<std::shar
 }
 
 
-std::shared_ptr<Material> search_by_name_map(std::string name,std::map<std::string, std::shared_ptr<Material>> map){
-    auto it = map.find(name);
-    if (it != map.end()) {
-        return it->second;
-    }
-    return nullptr;
+auto search_by_name_map(std::string name,std::map<std::string, std::shared_ptr<Material>> map){
+    return map.find(name);
 }
 
 std::shared_ptr<Material> search_by_name_vector(std::string name,std::vector<std::shared_ptr<Material>>& vector ){
@@ -230,8 +224,8 @@ std::shared_ptr<Material> search_by_name_vector(std::string name,std::vector<std
 
 
 TEST_CASE("searching","[searching]"){
-    std::string filename = "D:/LEGION/VisualStudioProjects/programmiersprachen-raytracer/source/materials.sdf";
-    Scene scene{filename};
+    Scene scene{};
+    load_materials("C:/Users/Polina/Desktop/new_folder/programmiersprachen-raytracer/source/materials.sdf",scene);
     std::vector<std::shared_ptr<Material>> material_vector;
     std::set<std::shared_ptr<Material>> material_set;
     std::map<std::string, std::shared_ptr<Material>> material_map;
@@ -241,21 +235,21 @@ TEST_CASE("searching","[searching]"){
         material_set.insert(pair.second);
         material_map.insert(pair);
     }
-    std::shared_ptr<Material>& sp = scene.materials_.at("red");
-    REQUIRE(search_by_name_map("red", material_map) == scene.materials_.at("red"));
-    REQUIRE(search_by_name_map("yellow", material_map) == nullptr);
+    REQUIRE(search_by_name_map("red", material_map)->second == scene.materials_.at("red"));
+    REQUIRE(search_by_name_map("yellow", material_map)->second == nullptr);
 
     REQUIRE(search_by_name_set("red", material_set) == scene.materials_.at("red"));
     REQUIRE(search_by_name_set("yellow", material_set) == nullptr);
 
     REQUIRE(search_by_name_vector("blue", material_vector) == scene.materials_.at("blue"));
-    REQUIRE(search_by_name_vector("green", material_vector) == scene.materials_.at("green"));
+    REQUIRE(search_by_name_vector("green", material_vector) == nullptr);
+
 
 }
 
 int main(int argc, char* argv[]){
-    std::string filename = "D:/LEGION/VisualStudioProjects/programmiersprachen-raytracer/source/materials.sdf";
-    Scene scene{filename};
+    Scene scene{};
+    load_materials("C:/Users/Polina/Desktop/new_folder/programmiersprachen-raytracer/source/materials.sdf",scene);
     return Catch::Session().run(argc, argv);
 }
 

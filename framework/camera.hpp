@@ -7,7 +7,7 @@
 struct Camera {
 	std::string name;
 	float fov_x;
-	glm::vec3 positon{ 0.0f, 0.0f, 0.0f };
+	glm::vec3 position{0.0f, 0.0f, 0.0f };
 	glm::vec3 direction{ 0.0f, 0.0f, -1.0f };
 };
 
