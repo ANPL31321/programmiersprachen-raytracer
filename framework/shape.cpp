@@ -3,7 +3,7 @@
 Shape::Shape(std::string const& name, std::shared_ptr<Material> const& material) :
 	name_{ name },
 	material_{ material } {
-	std::cout << "Shape Konstruktor Aufruf" << std::endl;
+	//std::cout << "Shape Konstruktor Aufruf" << std::endl;
 }
 
 std::ostream& Shape::print(std::ostream& os) const {
@@ -16,5 +16,5 @@ std::ostream& operator<<(std::ostream& os, Shape const& s) {
 }
 
 Shape::~Shape() {
-	std::cout << "Shape Destruktor Aufruf" << std::endl;
+	//std::cout << "Shape Destruktor Aufruf" << std::endl;
 }

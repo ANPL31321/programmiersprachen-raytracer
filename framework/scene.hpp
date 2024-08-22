@@ -23,6 +23,7 @@ public:
     unsigned int get_x_res();
     unsigned int get_y_res();
     std::string const& get_output_file();
+
 private:
     void loadscene();
     void loadmaterial(std::istringstream& line_as_stream);

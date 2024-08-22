@@ -66,7 +66,7 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
             return;
         }
         shapes_.push_back(std::make_shared<Sphere>(Sphere{ name, material->second, center, radius }));
-        shapes_.back()->print(std::cout);
+        //shapes_.back()->print(std::cout);
     }
     else if ("box" == token) {
         std::string name;
@@ -163,7 +163,7 @@ void Scene::loadscene() {
 
     for (auto shape : shapes_) {
 
-        shape->print(std::cout);
+       // shape->print(std::cout);
     }
 
     sdf_file.close();
@@ -176,33 +176,66 @@ Scene::Scene(std::string const& file_name) :
 }
 
 Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
+    // Создаем луч от камеры через пиксель на экране
     Ray ray = norm(Ray{ camera_.position,
                         glm::vec3{(float)x - x_res_ / 2.0f,
                                   (float)y - y_res_ / 2.0f,
                                   distance_to_screen_} - camera_.position });
 
-    Pixel p{ x, y };
+    Pixel p{x, y};
 
+    // Инициализируем переменные для хранения ближайшего пересечения
+    HitPoint closest_hit;
+    closest_hit.distance = std::numeric_limits<float>::max();
+
+    // Перебираем все объекты в сцене
+    bool hit_found = false;
     for (auto shape : shapes_) {
-        //shape->print(std::cout);
         HitPoint hit_point = shape->intersect(ray);
+
         if (hit_point.success) {
-            p.color = compute_secondary_rays(hit_point);
-            return p;
+            //std::cout << "Intersection found at distance: " << hit_point.distance << std::endl;
+
+            // Если найдено пересечение ближе, обновляем ближайшее пересечение
+            if (hit_point.distance < closest_hit.distance) {
+                closest_hit = hit_point;
+                hit_found = true;
+            }
         }
     }
 
-    p.color = Color{ 0.0f, 0.0f, 0.0f };
+    // Если найдено пересечение, вычисляем цвет пикселя
+    if (hit_found) {
+        p.color = compute_secondary_rays(closest_hit);
+    } else {
+        //std::cout << "No intersection found for pixel (" << x << ", " << y << ")" << std::endl;
+    }
+
     return p;
 }
+
 
 
 Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
     // for now ignore shadow and reflection (later probably use reqursion)
     // for now there is only one light source
+    Color final_intensity{0.0f, 0.0f, 0.0f};
+    for (auto light_source: punktlichtquellen_) {
+        /*Color intensity{0.0f, 0.0f, 0.0f};
+        glm::vec3 light_direction = glm::normalize(hit_point.intersection_point - light_source->position);
+        glm::vec3 starting_point = light_source->position;
+        float scalar_product = glm::dot(hit_point.normale, light_direction);
+        float angle = acos(scalar_product);
 
-    Color final_intensity{ 0.0f, 0.0f, 0.0f };
-    for (auto light_source : punktlichtquellen_) {
+        if (angle > 1.5708) {
+            return {0, 0, 0};
+        } else {
+            // We do have illumination.
+            intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+            intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+            intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+            final_intensity += intensity;
+        }*/
         Color intensity{ 0.0f, 0.0f, 0.0f };
         Ray ray = norm(Ray{light_source->position,
                            (norm(light_source->position)-norm(hit_point.intersection_point))}); //вычисляем вектор от источника до точки пересечения луча камеру и объекта
@@ -214,7 +247,7 @@ Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
             }
             final_intensity+=intensity;
     }
-    return final_intensity;
+    return final_intensity+ambient_;
 }
 
 /*Color Scene::compute_secondary_rays(HitPoint const& hit_point) const {
