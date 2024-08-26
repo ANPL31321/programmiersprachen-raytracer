@@ -31,7 +31,9 @@ void Renderer::render()
           } else {
             p.color = Color{1.0f, 0.0f, float(y)/width_};
           }*/
-            write(scene_.render_pixel(x, y));
+            Pixel p = scene_.render_pixel(x, y);
+            p.c_ldr();
+            write(p);
         }
     }
     ppm_.save(filename_);
