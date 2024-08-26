@@ -22,6 +22,7 @@ public :
 
   Pixel(unsigned int = 0, unsigned int = 0);
   void print(std::ostream&) const;
+  void c_ldr();
 
   unsigned int x = 0;
   unsigned int y = 0;
