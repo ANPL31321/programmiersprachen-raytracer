@@ -241,13 +241,43 @@ Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
                            (norm(light_source->position)-norm(hit_point.intersection_point))}); //вычисляем вектор от источника до точки пересечения луча камеру и объекта
         float scalar_product = glm::dot(hit_point.normale, ray.direction);//считаем скалярное произведение между нормалью в этой точке и
             if (scalar_product>0) {
-                intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
-                intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
-                intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+                //intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+                //intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+                //intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+                intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness;
             }
             final_intensity+=intensity;
+
+            intensity = { 0.0f, 0.0f, 0.0f };
+            glm::vec3 v = glm::normalize(hit_point.ray_direction); // not sure if already normalized (check)
+            /*
+            intensity.r = light_source->brightness * hit_point.material_intersected_->ks_.r *
+                std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
+            intensity.g = light_source->brightness * hit_point.material_intersected_->ks_.g *
+                std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
+            intensity.b = light_source->brightness * hit_point.material_intersected_->ks_.b *
+                std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
+                */
+
+            glm::vec3 reflected_vector = compute_reflected_vector(ray.direction, hit_point.normale);
+
+            final_intensity += hit_point.material_intersected_->ks_ * 
+                std::pow(glm::dot(reflected_vector, v), hit_point.material_intersected_->m_) *
+                light_source->brightness;
     }
     return final_intensity+ambient_;
+}
+
+glm::vec3 Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const {
+    // и луч и нормаль заране нормированы
+    // ищем проецию луча на нормаль
+    // (<n, r>  * r) / (|n| * |r|)
+    glm::vec3 proj_v_on_n = normale * glm::dot(v, normale);
+    // porj = ray + perp -> perp = proj - ray
+    glm::vec3 perpendicular = proj_v_on_n - v;
+    // reflected_ray = ray + perp * 2
+    perpendicular *= 2;
+    return v + perpendicular;
 }
 
 /*Color Scene::compute_secondary_rays(HitPoint const& hit_point) const {
