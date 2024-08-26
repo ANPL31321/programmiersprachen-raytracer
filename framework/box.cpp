@@ -23,6 +23,7 @@ std::ostream& Box::print(std::ostream& os) const {
 }
 
 HitPoint Box::intersect(Ray const& ray) const {
+    /*
     bool success = false;
     float t_min = std::numeric_limits<float>::max();
     glm::vec3 intersection_point;
@@ -60,9 +61,9 @@ HitPoint Box::intersect(Ray const& ray) const {
         };
     } else {
         return HitPoint{ false, 0, "", nullptr, glm::vec3(), glm::vec3(), glm::vec3() };
-    }
+    }*/
 
-	/*bool success = false;
+	bool success = false;
 
     float t_min = -1;
    glm::vec3 normale{0.0f, 0.0f, 0.0f};
@@ -145,7 +146,7 @@ HitPoint Box::intersect(Ray const& ray) const {
        }
    }
 
-    return HitPoint { success, t_min, Shape::name_, Shape::material_, intersection_point, ray.direction, normale };*/
+    return HitPoint { success, t_min, Shape::name_, Shape::material_, intersection_point, ray.direction, normale };
     /*HitPoint hitPoint{false, 0, Shape::name_, Shape::material_, {0,0,0}, ray.direction, {0,0,0} };
     float tmin = (min_.x - ray.origin.x) / ray.direction.x;
     float tmax = (max_.x - ray.origin.x) / ray.direction.x;
