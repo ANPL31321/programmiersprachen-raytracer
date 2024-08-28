@@ -176,6 +176,7 @@ Scene::Scene(std::string const& file_name) :
 }
 
 Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
+    // Создаем луч от камеры через пиксель на экране
     Ray ray = norm(Ray{ camera_.position,
                         glm::vec3{(float)x - x_res_ / 2.0f,
                                   (float)y - y_res_ / 2.0f,
@@ -187,12 +188,15 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
     HitPoint closest_hit;
     closest_hit.distance = std::numeric_limits<float>::max();
 
+    // Перебираем все объекты в сцене
     bool hit_found = false;
     for (auto shape : shapes_) {
         HitPoint hit_point = shape->intersect(ray);
 
         if (hit_point.success) {
+            //std::cout << "Intersection found at distance: " << hit_point.distance << std::endl;
 
+            // Если найдено пересечение ближе, обновляем ближайшее пересечение
             if (hit_point.distance < closest_hit.distance) {
                 closest_hit = hit_point;
                 hit_found = true;
@@ -200,9 +204,11 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
         }
     }
 
+    // Если найдено пересечение, вычисляем цвет пикселя
     if (hit_found) {
         p.color = compute_secondary_rays(closest_hit);
     } else {
+        //std::cout << "No intersection found for pixel (" << x << ", " << y << ")" << std::endl;
     }
 
     return p;
@@ -211,36 +217,100 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
+    // for now ignore shadow and reflection (later probably use reqursion)
+    // for now there is only one light source
     Color final_intensity{0.0f, 0.0f, 0.0f};
-
     for (auto light_source: punktlichtquellen_) {
-        glm::vec3 light_dir = norm(light_source->position - hit_point.intersection_point);
-        Ray shadow_ray = Ray{hit_point.intersection_point + 0.001f * light_dir, light_dir};
+        /*Color intensity{0.0f, 0.0f, 0.0f};
+        glm::vec3 light_direction = glm::normalize(hit_point.intersection_point - light_source->position);
+        glm::vec3 starting_point = light_source->position;
+        float scalar_product = glm::dot(hit_point.normale, light_direction);
+        float angle = acos(scalar_product);
+
+        if (angle > 1.5708) {
+            return {0, 0, 0};
+        } else {
+            // We do have illumination.
+            intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+            intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+            intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+            final_intensity += intensity;
+        }*/
         Color intensity{ 0.0f, 0.0f, 0.0f };
+        Ray ray = norm(Ray{light_source->position,
+                           (norm(light_source->position)-norm(hit_point.intersection_point))}); //вычисляем вектор от источника до точки пересечения луча камеру и объекта
+        float scalar_product = glm::dot(hit_point.normale, ray.direction);//считаем скалярное произведение между нормалью в этой точке и
+            if (scalar_product>0) {
+                //intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+                //intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+                //intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+                intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness;
+            }
+            final_intensity+=intensity;
 
-        bool in_shadow=false;
+            intensity = { 0.0f, 0.0f, 0.0f };
+            glm::vec3 v = glm::normalize(hit_point.ray_direction); // not sure if already normalized (check)
+            /*
+            intensity.r = light_source->brightness * hit_point.material_intersected_->ks_.r *
+                std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
+            intensity.g = light_source->brightness * hit_point.material_intersected_->ks_.g *
+                std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
+            intensity.b = light_source->brightness * hit_point.material_intersected_->ks_.b *
+                std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
+                */
 
-        for (auto shape:shapes_) {
-            HitPoint shadow_hit = shape->intersect(shadow_ray);
-            if (shadow_hit.success &&
-                shadow_hit.distance < glm::length(light_source->position - hit_point.intersection_point)) {
-                in_shadow = true;
+            glm::vec3 reflected_vector = compute_reflected_vector(ray.direction, hit_point.normale);
+
+            final_intensity += hit_point.material_intersected_->ks_ * 
+                std::pow(glm::dot(reflected_vector, v), hit_point.material_intersected_->m_) *
+                light_source->brightness;
+    }
+    return final_intensity+ambient_;
+}
+
+glm::vec3 Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const {
+    // и луч и нормаль заране нормированы
+    // ищем проецию луча на нормаль
+    // (<n, r>  * r) / (|n| * |r|)
+    glm::vec3 proj_v_on_n = normale * glm::dot(v, normale);
+    // porj = ray + perp -> perp = proj - ray
+    glm::vec3 perpendicular = proj_v_on_n - v;
+    // reflected_ray = ray + perp * 2
+    perpendicular *= 2;
+    return v + perpendicular;
+}
+
+/*Color Scene::compute_secondary_rays(HitPoint const& hit_point) const {
+    // for now ignore shadow and reflection (later probably use reqursion)
+    // for now there is only one light source
+    Color final_intensity{ 0.0f, 0.0f, 0.0f };
+    Color intensity{ 0.0f, 0.0f, 0.0f };
+    for (auto light_source : punktlichtquellen_) {
+        Ray ray = norm(Ray{ hit_point.intersection_point, {light_source->position.x - hit_point.intersection_point.x, light_source->position.y - hit_point.intersection_point.y, light_source->position.z - hit_point.intersection_point.z} }); // LoD!!!!
+        bool intersection = false;
+        for (auto shape : shapes_) {
+            HitPoint hit_point = shape->intersect(ray);
+            if (hit_point.success) {
+                intersection = true;
+                //std::cout << hit_point.distance << std::endl;
                 break;
             }
         }
-
-        if (!in_shadow) {
-            float scalar_product = glm::dot(hit_point.normale, light_dir);
-                if (scalar_product>0) {
-                    intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
-                    intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
-                    intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
-                }
-                final_intensity+=intensity;
-            }
+        if (intersection) {
+            //std::cout << ray.direction.x << std::endl;
         }
-    return final_intensity+ambient_;
-}
+        if (!intersection) {
+            // LoD!!!
+            float scalar_product = hit_point.normale.x * ray.direction.x +
+                                   hit_point.normale.y * ray.direction.y + hit_point.normale.z * ray.direction.z;
+            intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
+            intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
+            intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
+        }
+        final_intensity+=intensity;
+    }
+    return final_intensity;
+}*/
 
 
 

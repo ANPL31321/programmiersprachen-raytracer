@@ -51,6 +51,32 @@ struct Color
     return tmp;
   }
 
+  Color& operator*=(Color const& other) {
+      r *= other.r;
+      g *= other.g;
+      b *= other.b;
+      return *this;
+  }
+
+  friend Color operator*(Color const& a, Color const& b) {
+      Color tmp = a;
+      tmp *= b;
+      return tmp;
+  }
+
+  Color& operator*=(float koef) {
+      r *= koef;
+      g *= koef;
+      b *= koef;
+      return *this;
+  }
+
+  friend Color operator*(Color const& a, float koef) {
+      Color tmp = a;
+      tmp *= koef;
+      return tmp;
+  }
+
   float r;
   float g;
   float b;
