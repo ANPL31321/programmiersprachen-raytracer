@@ -219,6 +219,17 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
     Color final_intensity{0.0f, 0.0f, 0.0f};
 
+    glm::vec3 reflected_original_ray_direcrion = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
+    for (auto shape : shapes_) {
+        if (hit_point.name_intersected_obj.compare(shape->get_name()) == 0) {
+            continue;
+        }
+        HitPoint reflected_hit = shape->intersect(norm(Ray{ hit_point.intersection_point, reflected_original_ray_direcrion }));
+        if (reflected_hit.success) {
+            final_intensity += compute_secondary_rays(reflected_hit);
+        }
+    }
+
     for (auto light_source: punktlichtquellen_) {
         glm::vec3 light_dir = norm(light_source->position - hit_point.intersection_point);
         Ray shadow_ray = Ray{hit_point.intersection_point + 0.001f * light_dir, light_dir};
