@@ -2,12 +2,12 @@ define material red 1 0 0 1 0 0 1 0 0 20
 define material green 0 1 0 0 1 0 0 1 0 50
 define material blue 0 0 1 0 0 1 0 0 1 10
 define material white 1 1 1 1 1 1 1 1 1 10
-define shape sphere bsphere 0 -80 -150 50 blue
-define shape sphere rsphere 0 80 -150 50 red
-define shape sphere gsphere 80 0 -150 50 green
-define shape sphere wsphere -80 0 -150 50 white
-define light sun2 100 0 -100 .2 .2 .2 1
-define light sun3 -100 0 -100 .2 .2 .2 1
+define shape sphere bsphere -100 50 -200 120 blue
+define shape box gbox -125 -25 -75 -100 25 -50 green
+define shape box rbox 100 -25 -75 125 25 -50 red
+define light direct 0 0 0 .3 .6 .2 0.5
+define light side1 200 0 -50 .1 .1 .1 0.5
+define light side2 -200 0 -50 .1 .1 .1 0.5
 define camera eye 150.0
-define ambient .1 .1 .1
+define ambient .03 .09 .19
 render eye image.ppm 800 800
