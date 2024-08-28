@@ -18,3 +18,7 @@ std::ostream& operator<<(std::ostream& os, Shape const& s) {
 Shape::~Shape() {
 	//std::cout << "Shape Destruktor Aufruf" << std::endl;
 }
+
+std::string const& Shape::get_name() const {
+	return name_;
+}
