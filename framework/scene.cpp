@@ -226,7 +226,7 @@ Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
         }
         HitPoint reflected_hit = shape->intersect(norm(Ray{ hit_point.intersection_point, reflected_original_ray_direcrion }));
         if (reflected_hit.success) {
-            final_intensity += compute_secondary_rays(reflected_hit);
+            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit);
         }
     }
 
@@ -252,7 +252,7 @@ Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
                 //intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
                 //intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
                 //intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
-                intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness;
+                intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness * light_source->color;
             }
             final_intensity += intensity;
             intensity = {0.0f, 0.0f, 0.0f};
@@ -270,10 +270,10 @@ Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
 
             final_intensity += hit_point.material_intersected_->ks_ *
                                std::pow(glm::dot(reflected_vector, v), hit_point.material_intersected_->m_) *
-                               light_source->brightness;
+                               light_source->brightness * light_source->color;
         }
     }
-    return final_intensity + ambient_;
+    return final_intensity + ambient_ * hit_point.material_intersected_->ka_;
 }
 
 
