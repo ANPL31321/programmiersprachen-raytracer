@@ -144,6 +144,9 @@ void Scene::load_scene() {
             else if ("camera" == token) {
                 line_as_stream >> camera_.name;
                 line_as_stream >> camera_.fov_x;
+                line_as_stream >> camera_.eye.x >> camera_.eye.y >> camera_.eye.z;
+                line_as_stream >> camera_.direction.x >>camera_.direction.y >> camera_.direction.z;
+                line_as_stream >> camera_.up_vector.x >> camera_.up_vector.y >> camera_.up_vector.z;
             }
             else {
                 std::cout << "Unexpected keyword: " << token << std::endl;
@@ -221,10 +224,12 @@ Scene::Scene(std::string const& file_name) :
 
 Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
     // create ray through the camera's pixel
-    Ray ray = norm(Ray{ camera_.position,
-                        glm::vec3{(float)x - x_res_ / 2.0f,
-                                  (float)y - y_res_ / 2.0f,
-                                  distance_to_screen_} - camera_.position });
+    glm::vec3 ray_dir = glm::normalize(glm::vec3{(float)x - x_res_ / 2.0f,
+                                                 (float)y - y_res_ / 2.0f,
+                                                 distance_to_screen_});
+    Ray ray{camera_.eye, ray_dir};
+    ray = camera_.transform_camera_rays(ray);
+
 
     Pixel p{x, y};
 
