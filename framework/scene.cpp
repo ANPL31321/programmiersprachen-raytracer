@@ -3,6 +3,7 @@
 #include "scene.hpp"
 #include "vector"
 #include <glm/glm.hpp>
+#include "composite.hpp"
 
 #include <iostream>
 //file stream for opening files
@@ -91,11 +92,36 @@ void Scene::load_shape(std::istringstream& line_as_stream) {
 
         shapes_.push_back(std::make_shared<Box>(Box{name,material->second,min,max}));
         shapes_.back()->print(std::cout);
+    } else if (token=="composite") {
+        std::string composite_name;
+        line_as_stream >> composite_name;
+
+        // Create the composite object
+        auto composite = std::make_shared<Composite>(composite_name, nullptr);
+
+        // Read the names of the child shapes and add them to the composite
+        std::string child_name;
+        while (line_as_stream >> child_name) {
+            // Find the child shape by name in the existing vector
+            auto it = std::find_if(shapes_.begin(), shapes_.end(),
+                                   [&child_name](std::shared_ptr<Shape> const &shape) {
+                                       return shape->getName() == child_name;
+                                   });
+
+            if (it != shapes_.end()) {
+                composite->add(*it);// Add the child shape to the composite
+                shapes_.erase(it);
+            } else {
+                std::cout << "Shape with name " << child_name << " not found" << std::endl;
+            }
+        }
+        shapes_.push_back(composite);
     }
     else {
         std::cout << "Unexpected keyword: " << token << std::endl;
     }
 }
+
 
 void Scene::load_light(std::istringstream& line_as_stream) {
     Punktlichquelle lightsource{ "", glm::vec3{0.0f, 0.0f, 0.0f}, Color{0.0f, 0.0f, 0.0f} };
@@ -194,17 +220,19 @@ void Scene::load_transformations(std::istringstream& line_as_stream){
                 float x, y, z;
                 line_as_stream >> x >> y >> z;
                 shape->translate(x, y, z);
-                std::cout<<"translated"<<std::endl;
+                std::cout<<shape->getName()<<" "<<"translated"<<std::endl;
             }
             else if (token == "scale") {
                 float x, y, z;
                 line_as_stream >> x >> y >> z;
                 shape->scale(x, y, z);
+                std::cout<<shape->getName()<<" "<<"scaled"<<std::endl;
             }
             else if (token == "rotate") {
                 float angle, x, y, z;
                 line_as_stream >> angle >> x >> y >> z;
                 shape->rotate(angle, x, y, z);
+                std::cout<<shape->getName()<<" "<<"rotated"<<std::endl;
             } else {
                 std::cout<<"there is no such transformation"<<std::endl;
             }
@@ -255,7 +283,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
     if (hit_found) {
-        p.color = compute_secondary_rays(closest_hit);
+        p.color = compute_secondary_rays(closest_hit,1);
     } else {
         //std::cout << "No intersection found for pixel (" << x << ", " << y << ")" << std::endl;
     }
@@ -265,23 +293,28 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 
-Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
-    Color final_intensity{0.0f, 0.0f, 0.0f};
+Color Scene::compute_secondary_rays(HitPoint const& hit_point, int depth) const {
+    const int MAX_RECURSION_DEPTH=30;
+    if (depth > MAX_RECURSION_DEPTH) { // Define a max recursion depth, e.g., 5 or 10
+        return Color{0.5f, 0.5f, 0.5f}; // Return no contribution if depth is exceeded
+    }
 
-    glm::vec3 reflected_original_ray_direcrion = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
-    for (auto shape : shapes_) {
-        if (hit_point.name_intersected_obj.compare(shape->get_name()) == 0) {
+    Color final_intensity{0.0f, 0.0f, 0.0f};
+    glm::vec3 reflected_original_ray_direction = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
+
+    /*for (auto shape : shapes_) {
+        if (hit_point.name_intersected_obj.compare(shape->getName()) == 0) {
             continue;
         }
-        HitPoint reflected_hit = shape->intersect(norm(Ray{ hit_point.intersection_point, reflected_original_ray_direcrion }));
+        HitPoint reflected_hit = shape->intersect(norm(Ray{hit_point.intersection_point, reflected_original_ray_direction}));
         if (reflected_hit.success) {
-            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit);
+            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1);
         }
-    }
+    }*/
 
     for (auto light_source: punktlichtquellen_) {
         glm::vec3 light_dir = norm(light_source->position - hit_point.intersection_point);
-        Ray shadow_ray = Ray{hit_point.intersection_point + 0.001f * light_dir, light_dir};
+        Ray shadow_ray = Ray{hit_point.intersection_point + 0.01f * light_dir, light_dir};
         Color intensity{0.0f, 0.0f, 0.0f};
 
         bool in_shadow = false;
