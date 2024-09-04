@@ -294,7 +294,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 Color Scene::compute_secondary_rays(HitPoint const& hit_point, int depth) const {
-    const int MAX_RECURSION_DEPTH=30;
+    const int MAX_RECURSION_DEPTH=1;
     if (depth > MAX_RECURSION_DEPTH) { // Define a max recursion depth, e.g., 5 or 10
         return Color{0.5f, 0.5f, 0.5f}; // Return no contribution if depth is exceeded
     }
@@ -302,15 +302,15 @@ Color Scene::compute_secondary_rays(HitPoint const& hit_point, int depth) const 
     Color final_intensity{0.0f, 0.0f, 0.0f};
     glm::vec3 reflected_original_ray_direction = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
 
-    /*for (auto shape : shapes_) {
-        if (hit_point.name_intersected_obj.compare(shape->getName()) == 0) {
+    for (auto shape : shapes_) {
+        HitPoint reflected_hit = shape->intersect(norm(Ray{hit_point.intersection_point, reflected_original_ray_direction}));
+        if (hit_point.name_intersected_obj == reflected_hit.name_intersected_obj) {
             continue;
         }
-        HitPoint reflected_hit = shape->intersect(norm(Ray{hit_point.intersection_point, reflected_original_ray_direction}));
         if (reflected_hit.success) {
             final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1);
         }
-    }*/
+    }
 
     for (auto light_source: punktlichtquellen_) {
         glm::vec3 light_dir = norm(light_source->position - hit_point.intersection_point);
