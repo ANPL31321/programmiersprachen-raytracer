@@ -11,16 +11,16 @@
 class Composite:public Shape{
 public:
     Composite(std::string const& name, std::shared_ptr<Material> const& material);
-    virtual float area() const override;
-    virtual float volume() const override;
-    virtual std::ostream& print(std::ostream& os) const;
-    virtual HitPoint intersect(Ray const& ray) const override;
-    virtual void scale(float const x, float const y, float const z) override;
-    virtual void translate(float const x, float const y, float const z) override;
-    virtual void rotate(float const angle, float const x, float const y, float const z) override;
-    virtual Ray transform_ray(Ray const& ray)const override;
-    virtual std::string getName() const;
-    virtual glm::vec3 getCenter()const override;
+    float area() const override;
+    float volume() const override;
+    std::ostream& print(std::ostream& os) const;
+    HitPoint intersect(Ray const& ray) const override;
+    void scale(float const x, float const y, float const z) override;
+    void translate(float const x, float const y, float const z) override;
+    void rotate(float const angle, float const x, float const y, float const z) override;
+    Ray transform_ray(Ray const& ray)const override;
+    std::string getName() const;
+    glm::vec3 getCenter()const override;
     void add(std::shared_ptr<Shape> shape);
     void remove(std::shared_ptr<Shape> shape);
     std::vector<std::shared_ptr<Shape>> getChildren();
