@@ -1,5 +1,10 @@
 #include "box.hpp"
+#include "glm/detail/func_geometric.hpp"
 #include <numbers>
+
+
+
+#include <cmath>
 
 Box::Box(std::string const& name, std::shared_ptr<Material> const& material, glm::vec3 const& min, glm::vec3 const& max):
 	Shape::Shape{name, material},
@@ -16,13 +21,18 @@ float Box::volume() const {
 	return diag.x * diag.y * diag.z;
 }
 
+std::string Box::getName() const{
+    return name_;
+};
+
 std::ostream& Box::print(std::ostream& os) const {
-	return Shape::print(os) <<
+    return os << "Name: " << name_ << "\n" <<
+              "Material: " << (*material_)<<
 		"Min: " << "(" << min_.x << ", " << min_.y << ", " << min_.z << ")\n" <<
 		"Max: " << "(" << max_.x << ", " << max_.y << ", " << max_.z << ")\n";
 }
 
-HitPoint Box::intersect(Ray const& ray) const {
+HitPoint Box::intersect(Ray const& ray_world) const {
     /*bool success = false;
     float t_min = std::numeric_limits<float>::max();
     glm::vec3 intersection_point;
@@ -63,6 +73,7 @@ HitPoint Box::intersect(Ray const& ray) const {
     }*/
 
     bool success = false;
+    Ray ray=transform_ray(ray_world);
 
     float t_min = -1;
     glm::vec3 normale{0.0f, 0.0f, 0.0f};
@@ -144,47 +155,54 @@ HitPoint Box::intersect(Ray const& ray) const {
             normale = {0.0f, 0.0f, 1.0f};
         }
     }
-    return HitPoint { success, t_min, Shape::name_, Shape::material_, intersection_point, ray.direction, normale };
+
+    if (success) {
+        glm::vec4 intersection_local(intersection_point, 1.0f);
+        glm::vec4 normal_local(normale, 0.0f);
+
+
+        glm::vec3 intersection_world = glm::vec3(world_transformation_ * intersection_local);
+        glm::vec3 normal_world = glm::normalize(glm::vec3(glm::transpose(world_transformation_) * normal_local));
+
+        return HitPoint{true, t_min, name_, material_, intersection_world, ray_world.direction, normal_world};
+    } else {
+        return HitPoint{false, 0, "", nullptr, glm::vec3(), glm::vec3(), glm::vec3()};
+    }}
+
+glm::vec3 Box::getCenter() const{
+    return center_;
+};
+
+
+void Box::translate(float const x, float const y, float const z) {
+    glm::mat4 translation = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+    world_transformation_ = translation * world_transformation_;
+    world_transformation_inv_ = glm::inverse(world_transformation_);
+}
+
+void Box::scale(float const x, float const y, float const z) {
+    glm::mat4 scaling = glm::scale(glm::mat4(1.0f), glm::vec3(x, y, z));
+    world_transformation_ = scaling * world_transformation_;
+    world_transformation_inv_ = glm::inverse(world_transformation_);
 }
 
 
-    /*HitPoint hitPoint{false, 0, Shape::name_, Shape::material_, {0,0,0}, ray.direction, {0,0,0} };
-    float tmin = (min_.x - ray.origin.x) / ray.direction.x;
-    float tmax = (max_.x - ray.origin.x) / ray.direction.x;
+void Box::rotate(float const angle, float const x, float const y, float const z) {
+    glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(x, y, z));
+    world_transformation_ = rotation * world_transformation_;
+    world_transformation_inv_ = glm::inverse(world_transformation_);
+}
 
-    if (tmin > tmax) std::swap(tmin, tmax);
 
-    float tymin = (min_.y - ray.origin.y) / ray.direction.y;
-    float tymax = (max_.y - ray.origin.y) / ray.direction.y;
+//transform ray into local CS
+Ray Box::transform_ray( Ray const& ray) const {
+    glm::vec4 origin_local = world_transformation_inv_ * glm::vec4(ray.origin, 1.0f);
 
-    if (tymin > tymax) std::swap(tymin, tymax);
 
-    if ((tmin > tymax) || (tymin > tmax))
-        return hitPoint;
+    glm::vec4 direction_local = world_transformation_inv_ * glm::vec4(ray.direction, 0.0f);
 
-    if (tymin > tmin) tmin = tymin;
-    if (tymax < tmax) tmax = tymax;
-
-    float tzmin = (min_.z - ray.origin.z) / ray.direction.z;
-    float tzmax = (max_.z - ray.origin.z) / ray.direction.z;
-
-    if (tzmin > tzmax) std::swap(tzmin, tzmax);
-
-    if ((tmin > tzmax) || (tzmin > tmax))
-        return hitPoint;
-
-    if (tzmin > tmin) tmin = tzmin;
-    if (tzmax < tmax) tmax = tzmax;
-    success= true;
-
-    glm::vec3 point = ray.direction*tmin;
-    glm::vec3 normal;
-    if (std::abs(point.x) > std::abs(point.y) && std::abs(point.x) > std::abs(point.z)) {
-        normal= glm::vec3(point.x > 0 ? 1.0f : -1.0f, 0.0f, 0.0f);
-    } else if (std::abs(point.y) > std::abs(point.x) && std::abs(point.y) > std::abs(point.z)) {
-        normal= glm::vec3(0.0f, point.y > 0 ? 1.0f : -1.0f, 0.0f);
-    } else {
-        normal = glm::vec3(0.0f, 0.0f, point.z > 0 ? 1.0f : -1.0f);
-    }
-
-    hitPoint={success,tmin,Shape::name_, Shape::material_,ray.direction*tmin, ray.direction, normal };*/
+    return Ray{
+            glm::vec3(origin_local),
+            glm::normalize(glm::vec3(direction_local))
+    };
+}

@@ -23,12 +23,12 @@ public:
     unsigned int get_x_res();
     unsigned int get_y_res();
     std::string const& get_output_file();
-
 private:
-    void loadscene();
-    void loadmaterial(std::istringstream& line_as_stream);
-    void loadshape(std::istringstream& line_as_stream);
-    void loadlight(std::istringstream& line_as_stream);
+    void load_scene();
+    void load_material(std::istringstream& line_as_stream);
+    void load_shape(std::istringstream& line_as_stream);
+    void load_light(std::istringstream& line_as_stream);
+    void load_transformations(std::istringstream& line_as_stream);
     Color const& compute_secondary_rays(HitPoint const &hit_point, int depth, bool is_entry) const;
     glm::vec3 const& compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const;
     Ray const& compute_refracted_ray(HitPoint const& hit_point, bool reversed) const;

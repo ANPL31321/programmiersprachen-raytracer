@@ -3,6 +3,7 @@
 #include "scene.hpp"
 #include "vector"
 #include <glm/glm.hpp>
+#include "composite.hpp"
 
 #include <iostream>
 //file stream for opening files
@@ -20,7 +21,7 @@
 
 
 
-void Scene::loadmaterial(std::istringstream& line_as_stream) {
+void Scene::load_material(std::istringstream& line_as_stream) {
     std::shared_ptr<Material> parsed_material = std::make_shared<Material>(Material{ "",{0.0f,0.f,0.0f},{0.0f,0.f,0.0f},{0.0f,0.f,0.0f},0.0f });
     line_as_stream >> parsed_material->name_;
 
@@ -47,7 +48,7 @@ void Scene::loadmaterial(std::istringstream& line_as_stream) {
         << parsed_material->ka_ << " " << parsed_material->kd_ << parsed_material->ks_ << std::endl;
 }
 
-void Scene::loadshape(std::istringstream& line_as_stream) {
+void Scene::load_shape(std::istringstream& line_as_stream) {
     std::string token;
     line_as_stream >> token;
     if ("sphere" == token) {
@@ -68,7 +69,7 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
             std::cout << "Material " << name_of_material << " not found" << std::endl;
             return;
         }
-        shapes_.push_back(std::make_shared<Sphere>(Sphere{ name, material->second, center, radius }));
+        shapes_.push_back(std::make_shared<Sphere>(Sphere{name,material->second,center,radius}));
         //shapes_.back()->print(std::cout);
     }
     else if ("box" == token) {
@@ -92,15 +93,40 @@ void Scene::loadshape(std::istringstream& line_as_stream) {
             return;
         }
 
-        shapes_.push_back(std::make_shared<Box>(Box{ name, material->second, min, max }));
+        shapes_.push_back(std::make_shared<Box>(Box{name,material->second,min,max}));
         shapes_.back()->print(std::cout);
+    } else if (token=="composite") {
+        std::string composite_name;
+        line_as_stream >> composite_name;
+
+        // Create the composite object
+        auto composite = std::make_shared<Composite>(composite_name, nullptr);
+
+        // Read the names of the child shapes and add them to the composite
+        std::string child_name;
+        while (line_as_stream >> child_name) {
+            // Find the child shape by name in the existing vector
+            auto it = std::find_if(shapes_.begin(), shapes_.end(),
+                                   [&child_name](std::shared_ptr<Shape> const &shape) {
+                                       return shape->getName() == child_name;
+                                   });
+
+            if (it != shapes_.end()) {
+                composite->add(*it);// Add the child shape to the composite
+                shapes_.erase(it);
+            } else {
+                std::cout << "Shape with name " << child_name << " not found" << std::endl;
+            }
+        }
+        shapes_.push_back(composite);
     }
     else {
         std::cout << "Unexpected keyword: " << token << std::endl;
     }
 }
 
-void Scene::loadlight(std::istringstream& line_as_stream) {
+
+void Scene::load_light(std::istringstream& line_as_stream) {
     Punktlichquelle lightsource{ "", glm::vec3{0.0f, 0.0f, 0.0f}, Color{0.0f, 0.0f, 0.0f} };
     line_as_stream >> lightsource.name;
 
@@ -117,7 +143,7 @@ void Scene::loadlight(std::istringstream& line_as_stream) {
     punktlichtquellen_.push_back(std::make_shared<Punktlichquelle>(lightsource));
 }
 
-void Scene::loadscene() {
+void Scene::load_scene() {
     std::ifstream sdf_file(file_name_);
     if (!sdf_file.is_open()) {
         std::cout << "Could not find or open: " << file_name_ << std::endl;
@@ -131,10 +157,10 @@ void Scene::loadscene() {
         if ("define" == token) {
             line_as_stream >> token;
             if ("material" == token) {
-                loadmaterial(line_as_stream);
+                load_material(line_as_stream);
             }
             else if ("shape" == token) {
-                loadshape(line_as_stream);
+                load_shape(line_as_stream);
             }
             else if ("ambient" == token) {
                 line_as_stream >> ambient_.r;
@@ -142,11 +168,14 @@ void Scene::loadscene() {
                 line_as_stream >> ambient_.b;
             }
             else if ("light" == token) {
-                loadlight(line_as_stream);
+                load_light(line_as_stream);
             }
             else if ("camera" == token) {
                 line_as_stream >> camera_.name;
                 line_as_stream >> camera_.fov_x;
+                line_as_stream >> camera_.eye.x >> camera_.eye.y >> camera_.eye.z;
+                line_as_stream >> camera_.direction.x >>camera_.direction.y >> camera_.direction.z;
+                line_as_stream >> camera_.up_vector.x >> camera_.up_vector.y >> camera_.up_vector.z;
             }
             else {
                 std::cout << "Unexpected keyword: " << token << std::endl;
@@ -157,6 +186,8 @@ void Scene::loadscene() {
             line_as_stream >> output_file_;
             line_as_stream >> x_res_;
             line_as_stream >> y_res_;
+        } else if ("transform" == token){
+            load_transformations(line_as_stream);
         }
         else {
             std::cout << "Unexpected keyword: " << token << std::endl;
@@ -172,26 +203,72 @@ void Scene::loadscene() {
     sdf_file.close();
 }
 
+void Scene::load_transformations(std::istringstream& line_as_stream){
+    std::string token;
+
+        std::string shape_name;
+        line_as_stream >> shape_name;
+
+        auto it = std::find_if(shapes_.begin(), shapes_.end(), [&shape_name](std::shared_ptr<Shape> const& shape) {
+            return shape->getName() == shape_name;
+        });
+
+        if (it != shapes_.end()) { //if there is such a shape
+            std::shared_ptr<Shape> shape = *it;
+            line_as_stream >> token;
+            glm::vec3 center = shape->getCenter();
+            shape->translate(-center.x, -center.y, -center.z); //center the object
+
+            if (token == "translate") {
+                float x, y, z;
+                line_as_stream >> x >> y >> z;
+                shape->translate(x, y, z);
+                std::cout<<shape->getName()<<" "<<"translated"<<std::endl;
+            }
+            else if (token == "scale") {
+                float x, y, z;
+                line_as_stream >> x >> y >> z;
+                shape->scale(x, y, z);
+                std::cout<<shape->getName()<<" "<<"scaled"<<std::endl;
+            }
+            else if (token == "rotate") {
+                float angle, x, y, z;
+                line_as_stream >> angle >> x >> y >> z;
+                shape->rotate(angle, x, y, z);
+                std::cout<<shape->getName()<<" "<<"rotated"<<std::endl;
+            } else {
+                std::cout<<"there is no such transformation"<<std::endl;
+            }
+            shape->translate(center.x, center.y, center.z);//return it back
+        }
+        else {
+            std::cout << "Shape with name " << shape_name << " not found" << std::endl;
+        }
+
+}
+
 Scene::Scene(std::string const& file_name) :
     file_name_{ file_name } {
-    loadscene();
+    load_scene();
     distance_to_screen_ = -(x_res_ / 2.0f) / tan((camera_.fov_x / 2.0f) * std::numbers::pi / 180);
 }
 
 Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
-    // Создаем луч от камеры через пиксель на экране
-    Ray ray = norm(Ray{ camera_.position,
-                        glm::vec3{(float)x - x_res_ / 2.0f,
-                                  (float)y - y_res_ / 2.0f,
-                                  distance_to_screen_} - camera_.position });
+    // create ray through the camera's pixel
+    glm::vec3 ray_dir = glm::normalize(glm::vec3{(float)x - x_res_ / 2.0f,
+                                                 (float)y - y_res_ / 2.0f,
+                                                 distance_to_screen_});
+    Ray ray{camera_.eye, ray_dir};
+    ray = camera_.transform_camera_rays(ray);
+
 
     Pixel p{x, y};
 
-    // Инициализируем переменные для хранения ближайшего пересечения
+    // initialize variables for holding the nearest intersection
     HitPoint closest_hit;
     closest_hit.distance = std::numeric_limits<float>::max();
 
-    // Перебираем все объекты в сцене
+    // go through all the objects
     bool hit_found = false;
     for (auto shape : shapes_) {
         HitPoint hit_point = shape->intersect(ray);
@@ -199,7 +276,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
         if (hit_point.success) {
             //std::cout << "Intersection found at distance: " << hit_point.distance << std::endl;
 
-            // Если найдено пересечение ближе, обновляем ближайшее пересечение
+            // if there is a closer intersection update
             if (hit_point.distance < closest_hit.distance) {
                 closest_hit = hit_point;
                 hit_found = true;
@@ -207,9 +284,9 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
         }
     }
 
-    // Если найдено пересечение, вычисляем цвет пикселя
+
     if (hit_found) {
-        p.color = compute_secondary_rays(closest_hit, 0, true);
+        p.color = compute_secondary_rays(closest_hit,1, true);
     } else {
         //std::cout << "No intersection found for pixel (" << x << ", " << y << ")" << std::endl;
     }
@@ -219,26 +296,32 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 
-Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth, bool is_entry) const {
+Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth, bool is_entry) const {
+    const int MAX_RECURSION_DEPTH=1;
+    if (depth > MAX_RECURSION_DEPTH) { // Define a max recursion depth, e.g., 5 or 10
+        return Color{0.5f, 0.5f, 0.5f}; // Return no contribution if depth is exceeded
+    }
+  
     Color final_intensity{0.0f, 0.0f, 0.0f};
+    glm::vec3 reflected_original_ray_direction = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
 
-    glm::vec3 reflected_original_ray_direcrion = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
+    HitPoint closest_hit;
+    closest_hit.distance = std::numeric_limits<float>::max();
+    closest_hit.success = false;
+  
     for (auto shape : shapes_) {
-        if (hit_point.name_intersected_obj.compare(shape->get_name()) == 0) {
+        HitPoint reflected_hit = shape->intersect(norm(Ray{hit_point.intersection_point, reflected_original_ray_direction}));
+        if (hit_point.name_intersected_obj == reflected_hit.name_intersected_obj) {
             continue;
         }
-        HitPoint reflected_hit = shape->intersect(norm(Ray{ hit_point.intersection_point, reflected_original_ray_direcrion }));
-        HitPoint closest_hit;
-        closest_hit.distance = std::numeric_limits<float>::max();
-        closest_hit.success = false;
-
         if (reflected_hit.success) {
             //final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, t_outside);
             closest_hit = reflected_hit;
         }
-        if (closest_hit.success && depth < 5) {
-            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, is_entry);
-        }
+        
+    }
+    if (reflected_hit.success) {
+        final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, is_entry);
     }
 
     if (hit_point.material_intersected_->t_ > 0.0f) {
@@ -276,8 +359,8 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
     }
     for (auto light_source : punktlichtquellen_) {
         glm::vec3 light_dir = norm(light_source->position - hit_point.intersection_point);
-        Ray shadow_ray = Ray{ hit_point.intersection_point + 0.001f * light_dir, light_dir };
-        Color intensity{ 0.0f, 0.0f, 0.0f };
+        Ray shadow_ray = Ray{hit_point.intersection_point + 0.01f * light_dir, light_dir};
+        Color intensity{0.0f, 0.0f, 0.0f};
 
         bool in_shadow = false;
 
@@ -297,14 +380,14 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
             }
         }
 
-        if (!in_shadow) {
+        if (!in_shadow) { //if not in shadow calculate as normal
             float scalar_product = glm::dot(hit_point.normale, light_dir);
             if (scalar_product > 0) {
                 //intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
                 //intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
                 //intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
                 intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness * light_source->color * shadow_koeff;
-            }
+            }//if in shadow we count like there is none light source
             final_intensity += intensity;
             intensity = { 0.0f, 0.0f, 0.0f };
             glm::vec3 v = glm::normalize(hit_point.ray_direction); // not sure if already normalized (check)
@@ -355,43 +438,7 @@ Ray const& Scene::compute_refracted_ray(HitPoint const& hit_point, bool reversed
     return refracted_ray;
 }
 
-/*Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
-    // for now ignore shadow and reflection (later probably use reqursion)
-    // for now there is only one light source
-    Color final_intensity{0.0f, 0.0f, 0.0f};
-    for (auto light_source: punktlichtquellen_) {
 
-        Color intensity{ 0.0f, 0.0f, 0.0f };
-        Ray ray = norm(Ray{light_source->position,
-                           (norm(light_source->position)-norm(hit_point.intersection_point))}); //вычисляем вектор от источника до точки пересечения луча камеру и объекта
-        float scalar_product = glm::dot(hit_point.normale, ray.direction);//считаем скалярное произведение между нормалью в этой точке и
-        if (scalar_product>0) {
-            //intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
-            //intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
-            //intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
-            intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness;
-        }
-        final_intensity+=intensity;
-
-        intensity = { 0.0f, 0.0f, 0.0f };
-        glm::vec3 v = glm::normalize(hit_point.ray_direction); // not sure if already normalized (check)
-        /*
-        intensity.r = light_source->brightness * hit_point.material_intersected_->ks_.r *
-            std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
-        intensity.g = light_source->brightness * hit_point.material_intersected_->ks_.g *
-            std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
-        intensity.b = light_source->brightness * hit_point.material_intersected_->ks_.b *
-            std::pow(glm::dot(reflected_ray, v), hit_point.material_intersected_->m_);
-            */
-
-        /*glm::vec3 reflected_vector = compute_reflected_vector(ray.direction, hit_point.normale);
-
-        final_intensity += hit_point.material_intersected_->ks_ *
-                           std::pow(glm::dot(reflected_vector, v), hit_point.material_intersected_->m_) *
-                           light_source->brightness;
-    }
-    return final_intensity+ambient_;
-}*/
 
 
 glm::vec3 const& Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const {
@@ -405,38 +452,6 @@ glm::vec3 const& Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 c
     perpendicular *= 2;
     return v + perpendicular;
 }
-
-/*Color Scene::compute_secondary_rays(HitPoint const& hit_point) const {
-    // for now ignore shadow and reflection (later probably use reqursion)
-    // for now there is only one light source
-    Color final_intensity{ 0.0f, 0.0f, 0.0f };
-    Color intensity{ 0.0f, 0.0f, 0.0f };
-    for (auto light_source : punktlichtquellen_) {
-        Ray ray = norm(Ray{ hit_point.intersection_point, {light_source->position.x - hit_point.intersection_point.x, light_source->position.y - hit_point.intersection_point.y, light_source->position.z - hit_point.intersection_point.z} }); // LoD!!!!
-        bool intersection = false;
-        for (auto shape : shapes_) {
-            HitPoint hit_point = shape->intersect(ray);
-            if (hit_point.success) {
-                intersection = true;
-                //std::cout << hit_point.distance << std::endl;
-                break;
-            }
-        }
-        if (intersection) {
-            //std::cout << ray.direction.x << std::endl;
-        }
-        if (!intersection) {
-            // LoD!!!
-            float scalar_product = hit_point.normale.x * ray.direction.x +
-                                   hit_point.normale.y * ray.direction.y + hit_point.normale.z * ray.direction.z;
-            intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
-            intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
-            intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
-        }
-        final_intensity+=intensity;
-    }
-    return final_intensity;
-}*/
 
 
 
