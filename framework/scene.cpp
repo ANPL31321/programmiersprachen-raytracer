@@ -320,8 +320,8 @@ Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth,
         }
         
     }
-    if (reflected_hit.success) {
-        final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, is_entry);
+    if (closest_hit.success) {
+        final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(closest_hit, depth + 1, is_entry);
     }
 
     if (hit_point.material_intersected_->t_ > 0.0f) {
