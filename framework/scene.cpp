@@ -209,7 +209,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
     // Если найдено пересечение, вычисляем цвет пикселя
     if (hit_found) {
-        p.color = compute_secondary_rays(closest_hit, 0, 1.0f);
+        p.color = compute_secondary_rays(closest_hit, 0, true);
     } else {
         //std::cout << "No intersection found for pixel (" << x << ", " << y << ")" << std::endl;
     }
@@ -219,7 +219,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 
-Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth, float t_outside) const {
+Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth, bool is_entry) const {
     Color final_intensity{0.0f, 0.0f, 0.0f};
 
     glm::vec3 reflected_original_ray_direcrion = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
@@ -237,15 +237,22 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
             closest_hit = reflected_hit;
         }
         if (closest_hit.success && depth < 5) {
-            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, t_outside);
+            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, is_entry);
         }
     }
 
     if (hit_point.material_intersected_->t_ > 0.0f) {
         //Ray transparent_ray = norm(Ray{hit_point.intersection_point, compute_transparent_vector(hit_point.ray_direction, hit_point.normale, 0.99f, 1.0f) });
-        Ray transparent_ray{ hit_point.intersection_point + 0.001f * hit_point.ray_direction, hit_point.ray_direction };
-        //glm::vec3 transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, hit_point.material_intersected_->t_, t_outside);
-        //Ray transparent_ray{ hit_point.intersection_point + 0.001f * transparent_vec, transparent_vec };
+        //Ray transparent_ray{ hit_point.intersection_point + 0.001f * hit_point.ray_direction, hit_point.ray_direction };
+        glm::vec3 transparent_vec;
+        if (is_entry) {
+            transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, hit_point.material_intersected_->t_, 1.0f);
+        }
+        else {
+            transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, 1 / hit_point.material_intersected_->t_, 1.0f);
+        }
+        //is_entry = !is_entry;
+        Ray transparent_ray{ hit_point.intersection_point + 0.001f * transparent_vec, transparent_vec };
         //Ray transparent_ray{ hit_point.intersection_point, glm::refract(hit_point.ray_direction, hit_point.normale, 1.0f) };
         /*if (abs(hit_point.ray_direction.x - transparent_ray.direction.x) > 0.0001f ||
             abs(hit_point.ray_direction.y - transparent_ray.direction.y) > 0.0001f ||
@@ -268,12 +275,16 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
             }
         }
 
-        if (closest_hit.success && depth < 5) {
-            if (closest_hit.name_intersected_obj.compare(hit_point.name_intersected_obj) == 0) {
+        if (closest_hit.success && depth < 2) {
+            if (closest_hit.name_intersected_obj == hit_point.name_intersected_obj) {
                 closest_hit.normale = -closest_hit.normale;
                 //closest_hit.ray_direction = compute_transparent_vector(closest_hit.ray_direction, closest_hit.normale, t_outside, closest_hit.material_intersected_->t_);
+                is_entry = false;
             }
-            final_intensity += compute_secondary_rays(closest_hit, depth + 1, 1.0f);
+            else {
+                is_entry = true;
+            }
+            final_intensity += compute_secondary_rays(closest_hit, depth + 1, is_entry);
         }
     }
     for (auto light_source : punktlichtquellen_) {
