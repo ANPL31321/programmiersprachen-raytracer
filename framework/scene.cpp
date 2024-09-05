@@ -244,15 +244,17 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
     if (hit_point.material_intersected_->t_ > 0.0f) {
         //Ray transparent_ray = norm(Ray{hit_point.intersection_point, compute_transparent_vector(hit_point.ray_direction, hit_point.normale, 0.99f, 1.0f) });
         //Ray transparent_ray{ hit_point.intersection_point + 0.001f * hit_point.ray_direction, hit_point.ray_direction };
-        glm::vec3 transparent_vec;
+        //glm::vec3 transparent_vec;
+        Ray refracred_ray;
         if (is_entry) {
-            transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, hit_point.material_intersected_->t_, 1.0f);
+            //transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, hit_point.material_intersected_->t_, 1.0f);
+            refracred_ray = compute_refracted_ray(hit_point, false);
         }
         else {
-            transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, 1 / hit_point.material_intersected_->t_, 1.0f);
+            //transparent_vec = compute_transparent_vector(hit_point.ray_direction, hit_point.normale, 1 / hit_point.material_intersected_->t_, 1.0f);
+            refracred_ray = compute_refracted_ray(hit_point, true);
         }
-        //is_entry = !is_entry;
-        Ray transparent_ray{ hit_point.intersection_point + 0.001f * transparent_vec, transparent_vec };
+        //Ray transparent_ray{ hit_point.intersection_point + 0.001f * transparent_vec, transparent_vec };
         //Ray transparent_ray{ hit_point.intersection_point, glm::refract(hit_point.ray_direction, hit_point.normale, 1.0f) };
         /*if (abs(hit_point.ray_direction.x - transparent_ray.direction.x) > 0.0001f ||
             abs(hit_point.ray_direction.y - transparent_ray.direction.y) > 0.0001f ||
@@ -265,17 +267,17 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
         closest_hit.success = false;
 
         for (auto shape : shapes_) {
-            HitPoint transparent_hit = shape->intersect(transparent_ray);
-            if (transparent_hit.success) {
+            HitPoint refracted_hit = shape->intersect(refracred_ray);
+            if (refracted_hit.success) {
                 //final_intensity += compute_secondary_rays(transparent_hit, depth + 1, 1.0f);
                 //std::cout << hit_point.name_intersected_obj << " " << transparent_hit.name_intersected_obj << std::endl;
-                if (transparent_hit.distance < closest_hit.distance) {
-                    closest_hit = transparent_hit;
+                if (refracted_hit.distance < closest_hit.distance) {
+                    closest_hit = refracted_hit;
                 }
             }
         }
 
-        if (closest_hit.success && depth < 2) {
+        if (closest_hit.success && depth < 5) {
             if (closest_hit.name_intersected_obj == hit_point.name_intersected_obj) {
                 closest_hit.normale = -closest_hit.normale;
                 //closest_hit.ray_direction = compute_transparent_vector(closest_hit.ray_direction, closest_hit.normale, t_outside, closest_hit.material_intersected_->t_);
@@ -301,7 +303,7 @@ Color const& Scene::compute_secondary_rays(HitPoint const &hit_point, int depth,
             if (shadow_hit.success &&
                 shadow_hit.distance < glm::length(light_source->position - hit_point.intersection_point)) {
                 if (shadow_hit.material_intersected_->t_ > 0.0f) {
-                    shadow_koeff /= 0.5;
+                    shadow_koeff *= 0.5;
                 }
                 else {
                     in_shadow = true;
@@ -362,6 +364,34 @@ glm::vec3 const& Scene::compute_transparent_vector(glm::vec3 const& v, glm::vec3
     glm::vec3 perpendicular = glm::normalize(proj_v_on_n + v);
     
     return -n * cos_b + perpendicular * sin_b;
+}
+
+Ray const& Scene::compute_refracted_ray(HitPoint const& hit_point, bool reversed) const {
+    // ray_direction and normale are normalized
+    // cos_a = <-ray_direction, normale>
+    // sin_a = sqrt(1 - (cos_a)^2)
+    float sin_a = std::pow(1 - std::pow(glm::dot(-hit_point.ray_direction, hit_point.normale), 2), 0.5);
+    // Snell's law: t1 * sin_a = t2 * sin_b, t1 = 1 (air) -> sin_b = sin_a / t2, t2 = t_
+    // if reversed: t2 = 1 (air) -> sin_b = sin_a * t1, t1 = t_
+    float sin_b; // длина перпендикуляра
+    if (!reversed) {
+        sin_b = sin_a / hit_point.material_intersected_->t_; 
+    }
+    else {
+        sin_b = sin_a / (1 / hit_point.material_intersected_->t_);
+    }
+    float cos_b = std::pow(1 - std::pow(sin_b, 2), 0.5); // длина проэкции по нормали
+    // proj_r_on_n = (<-ray_direction, normale> * normale) / (|ray_direction| * |normale|),
+    // |ray_direction| == |normale| == 1 ->
+    // -> proj_r_on_n = <-ray_direction, normale> * normale
+    glm::vec3 proj_r_on_n = hit_point.normale * glm::dot(-hit_point.ray_direction, hit_point.normale);
+    // porj_r_on_n = - ray + perp -> perp = proj + ray
+    glm::vec3 perpendicular = glm::normalize(proj_r_on_n + hit_point.ray_direction);
+
+    glm::vec3 refracted_direction = -hit_point.normale * cos_b + perpendicular * sin_b;
+    Ray refracted_ray{ hit_point.intersection_point + 0.001f * refracted_direction, refracted_direction };
+    
+    return refracted_ray;
 }
 
 /*Color Scene::compute_secondary_rays(HitPoint const &hit_point) const {
