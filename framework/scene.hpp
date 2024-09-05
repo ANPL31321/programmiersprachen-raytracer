@@ -29,8 +29,9 @@ private:
     void load_shape(std::istringstream& line_as_stream);
     void load_light(std::istringstream& line_as_stream);
     void load_transformations(std::istringstream& line_as_stream);
-    Color compute_secondary_rays(HitPoint const &hit_point, int depth) const;
-    glm::vec3 compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const;
+    Color const& compute_secondary_rays(HitPoint const &hit_point, int depth, bool is_entry) const;
+    glm::vec3 const& compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const;
+    Ray const& compute_refracted_ray(HitPoint const& hit_point, bool reversed) const;
     unsigned int x_res_ = 0, y_res_ = 0;
     std::string output_file_ = "";
     std::string file_name_;

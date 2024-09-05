@@ -17,6 +17,7 @@
 #include "sphere.hpp"
 #include "glm/gtx/intersect.hpp"
 #include <limits>
+#include <math.h>
 
 
 
@@ -37,6 +38,8 @@ void Scene::load_material(std::istringstream& line_as_stream) {
     line_as_stream >> parsed_material->ks_.b;
 
     line_as_stream >> parsed_material->m_;
+
+    line_as_stream >> parsed_material->t_;
 
     materials_.insert(std::make_pair(parsed_material->name_, parsed_material));
 
@@ -283,7 +286,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
     if (hit_found) {
-        p.color = compute_secondary_rays(closest_hit,1);
+        p.color = compute_secondary_rays(closest_hit,1, true);
     } else {
         //std::cout << "No intersection found for pixel (" << x << ", " << y << ")" << std::endl;
     }
@@ -293,38 +296,87 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 
-Color Scene::compute_secondary_rays(HitPoint const& hit_point, int depth) const {
+Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth, bool is_entry) const {
     const int MAX_RECURSION_DEPTH=1;
     if (depth > MAX_RECURSION_DEPTH) { // Define a max recursion depth, e.g., 5 or 10
         return Color{0.5f, 0.5f, 0.5f}; // Return no contribution if depth is exceeded
     }
-
+  
     Color final_intensity{0.0f, 0.0f, 0.0f};
     glm::vec3 reflected_original_ray_direction = compute_reflected_vector(-hit_point.ray_direction, hit_point.normale);
 
+    HitPoint closest_hit;
+    closest_hit.distance = std::numeric_limits<float>::max();
+    closest_hit.success = false;
+  
     for (auto shape : shapes_) {
         HitPoint reflected_hit = shape->intersect(norm(Ray{hit_point.intersection_point, reflected_original_ray_direction}));
         if (hit_point.name_intersected_obj == reflected_hit.name_intersected_obj) {
             continue;
         }
         if (reflected_hit.success) {
-            final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1);
+            //final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, t_outside);
+            closest_hit = reflected_hit;
         }
+        
+    }
+    if (reflected_hit.success) {
+        final_intensity += hit_point.material_intersected_->ks_ * compute_secondary_rays(reflected_hit, depth + 1, is_entry);
     }
 
-    for (auto light_source: punktlichtquellen_) {
+    if (hit_point.material_intersected_->t_ > 0.0f) {
+        Ray refracred_ray;
+        if (is_entry) {
+            refracred_ray = compute_refracted_ray(hit_point, false);
+        }
+        else {
+            refracred_ray = compute_refracted_ray(hit_point, true);
+        }
+        
+        HitPoint closest_hit;
+        closest_hit.distance = std::numeric_limits<float>::max();
+        closest_hit.success = false;
+
+        for (auto shape : shapes_) {
+            HitPoint refracted_hit = shape->intersect(refracred_ray);
+            if (refracted_hit.success) {
+                if (refracted_hit.distance < closest_hit.distance) {
+                    closest_hit = refracted_hit;
+                }
+            }
+        }
+
+        if (closest_hit.success && depth < 5) {
+            if (closest_hit.name_intersected_obj == hit_point.name_intersected_obj) {
+                closest_hit.normale = -closest_hit.normale;
+                is_entry = false;
+            }
+            else {
+                is_entry = true;
+            }
+            final_intensity += compute_secondary_rays(closest_hit, depth + 1, is_entry);
+        }
+    }
+    for (auto light_source : punktlichtquellen_) {
         glm::vec3 light_dir = norm(light_source->position - hit_point.intersection_point);
         Ray shadow_ray = Ray{hit_point.intersection_point + 0.01f * light_dir, light_dir};
         Color intensity{0.0f, 0.0f, 0.0f};
 
         bool in_shadow = false;
 
-        for (auto shape: shapes_) {
+        float shadow_koeff = 1.0f;
+
+        for (auto shape : shapes_) {
             HitPoint shadow_hit = shape->intersect(shadow_ray);
             if (shadow_hit.success &&
                 shadow_hit.distance < glm::length(light_source->position - hit_point.intersection_point)) {
-                in_shadow = true;
-                break;
+                if (shadow_hit.material_intersected_->t_ > 0.0f) {
+                    shadow_koeff *= 0.5;
+                }
+                else {
+                    in_shadow = true;
+                    break;
+                }
             }
         }
 
@@ -334,10 +386,10 @@ Color Scene::compute_secondary_rays(HitPoint const& hit_point, int depth) const 
                 //intensity.r = light_source->brightness * hit_point.material_intersected_->kd_.r * scalar_product;
                 //intensity.g = light_source->brightness * hit_point.material_intersected_->kd_.g * scalar_product;
                 //intensity.b = light_source->brightness * hit_point.material_intersected_->kd_.b * scalar_product;
-                intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness;
+                intensity = hit_point.material_intersected_->kd_ * scalar_product * light_source->brightness * light_source->color * shadow_koeff;
             }//if in shadow we count like there is none light source
             final_intensity += intensity;
-            intensity = {0.0f, 0.0f, 0.0f};
+            intensity = { 0.0f, 0.0f, 0.0f };
             glm::vec3 v = glm::normalize(hit_point.ray_direction); // not sure if already normalized (check)
             /*
             intensity.r = light_source->brightness * hit_point.material_intersected_->ks_.r *
@@ -351,18 +403,45 @@ Color Scene::compute_secondary_rays(HitPoint const& hit_point, int depth) const 
             glm::vec3 reflected_vector = compute_reflected_vector(light_dir, hit_point.normale);
 
             final_intensity += hit_point.material_intersected_->ks_ *
-                               std::pow(glm::dot(reflected_vector, v), hit_point.material_intersected_->m_) *
-                               light_source->brightness * light_source->color;
+                std::pow(glm::dot(reflected_vector, v), hit_point.material_intersected_->m_) *
+                light_source->brightness * light_source->color;
         }
     }
     return final_intensity + ambient_ * hit_point.material_intersected_->ka_;
 }
 
+Ray const& Scene::compute_refracted_ray(HitPoint const& hit_point, bool reversed) const {
+    // ray_direction and normale are normalized
+    // cos_a = <-ray_direction, normale>
+    // sin_a = sqrt(1 - (cos_a)^2)
+    float sin_a = std::pow(1 - std::pow(glm::dot(-hit_point.ray_direction, hit_point.normale), 2), 0.5);
+    // Snell's law: t1 * sin_a = t2 * sin_b, t1 = 1 (air) -> sin_b = sin_a / t2, t2 = t_
+    // if reversed: t2 = 1 (air) -> sin_b = sin_a * t1, t1 = t_
+    float sin_b; // длина перпендикуляра
+    if (!reversed) {
+        sin_b = sin_a / hit_point.material_intersected_->t_; 
+    }
+    else {
+        sin_b = sin_a / (1 / hit_point.material_intersected_->t_);
+    }
+    float cos_b = std::pow(1 - std::pow(sin_b, 2), 0.5); // длина проэкции по нормали
+    // proj_r_on_n = (<-ray_direction, normale> * normale) / (|ray_direction| * |normale|),
+    // |ray_direction| == |normale| == 1 ->
+    // -> proj_r_on_n = <-ray_direction, normale> * normale
+    glm::vec3 proj_r_on_n = hit_point.normale * glm::dot(-hit_point.ray_direction, hit_point.normale);
+    // porj_r_on_n = - ray + perp -> perp = proj + ray
+    glm::vec3 perpendicular = glm::normalize(proj_r_on_n + hit_point.ray_direction);
+
+    glm::vec3 refracted_direction = -hit_point.normale * cos_b + perpendicular * sin_b;
+    Ray refracted_ray{ hit_point.intersection_point + 0.001f * refracted_direction, refracted_direction };
+    
+    return refracted_ray;
+}
 
 
 
 
-glm::vec3 Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const {
+glm::vec3 const& Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 const& normale) const {
     // и луч и нормаль заране нормированы
     // ищем проецию луча на нормаль
     // (<n, r>  * r) / (|n| * |r|)

@@ -9,7 +9,7 @@ struct Material{
     Material() = default;
     std::string name_;
     Color ka_,kd_,ks_;
-    float m_;
+    float m_,t_;
     std::ostream& print(std::ostream& os) const;
 };
 std::ostream& operator<<(std::ostream& os,Material const& material);
