@@ -31,3 +31,9 @@ std::ostream& operator<<(std::ostream& os, const Pixel& a)
     a.print(os);
   return os;
 }
+
+void Pixel::c_ldr() {
+    color.r = color.r / (color.r + 1);
+    color.g = color.g / (color.g + 1);
+    color.b = color.b / (color.b + 1);
+}

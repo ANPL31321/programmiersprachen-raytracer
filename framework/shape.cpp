@@ -2,13 +2,15 @@
 
 Shape::Shape(std::string const& name, std::shared_ptr<Material> const& material) :
 	name_{ name },
-	material_{ material } {
-	std::cout << "Shape Konstruktor Aufruf" << std::endl;
+	material_{ material },
+    world_transformation_{1.0f},
+    world_transformation_inv_{1.0f}{
+	//std::cout << "Shape Konstruktor Aufruf" << std::endl;
 }
 
 std::ostream& Shape::print(std::ostream& os) const {
 	return os << "Name: " << name_ << "\n" <<
-		"Material: " << material_;
+		"Material: " << (*material_);
 }
 
 std::ostream& operator<<(std::ostream& os, Shape const& s) {
@@ -16,5 +18,8 @@ std::ostream& operator<<(std::ostream& os, Shape const& s) {
 }
 
 Shape::~Shape() {
-	std::cout << "Shape Destruktor Aufruf" << std::endl;
+	//std::cout << "Shape Destruktor Aufruf" << std::endl;
 }
+std::string Shape::getName(){
+    return name_;
+};
