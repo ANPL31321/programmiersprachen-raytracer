@@ -16,9 +16,9 @@
 
 glm::vec3 new_camera_pos(glm::vec3 const& old_camera_pos, glm::vec3 const& center, float angle_radians) {
     glm::mat4 rotation_matrix{
-        glm::vec4{std::cos(angle_radians), std::sin(angle_radians), 0.0f, 0.0f},
+        glm::vec4{std::cos(angle_radians), 0.0f, std::sin(angle_radians), 0.0f},
         glm::vec4{0.0f, 1.0f, 0.0f, 0.0f},
-        glm::vec4{-std::sin(angle_radians), std::cos(angle_radians), 1.0f, 0.0f},
+        glm::vec4{-std::sin(angle_radians), 0.0f, std::cos(angle_radians), 0.0f},
         glm::vec4{0.0f, 0.0f, 0.0f, 1.0f}
     };
     glm::vec4 vec_from_center_to_camera = glm::vec4{ old_camera_pos - center, 1.0f };
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     }
     
     
-    std::string const dir_path = "C:/Anya Programming/test_dir_2/";
+    std::string const dir_path = "C:/Anya Programming/test_dir_3/";
     if (!std::filesystem::create_directory(dir_path)) {
         std::filesystem::remove_all(dir_path);
         std::filesystem::create_directory(dir_path);

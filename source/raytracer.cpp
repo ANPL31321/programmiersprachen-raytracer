@@ -12,14 +12,18 @@
 //now single threaded again
 int main(int argc, char* argv[])
 {
-    std::string const dir_path = "C:/Anya Programming/test_dir_2/";
-    for (auto const& file : std::filesystem::directory_iterator{ dir_path }) {
+    std::string const dir_path_input = "C:/Anya Programming/test_dir_3/";
+    std::string const dir_path = "../rendered_test_3/";
+    if (!std::filesystem::create_directory(dir_path)) {
+        std::filesystem::remove_all(dir_path);
+        std::filesystem::create_directory(dir_path);
+    }
+    for (auto const& file : std::filesystem::directory_iterator{ dir_path_input }) {
         //std::string const filepath = file.path().string();
         Scene scene{ file.path().string()};
         unsigned const image_width = scene.get_x_res();
         unsigned const image_height = scene.get_y_res();
-        std::filesystem::create_directory("../rendered_test_2/");
-        std::string const filename = "../rendered_test_2/" + scene.get_output_file();
+        std::string const filename = dir_path + scene.get_output_file();
 
         Renderer renderer{ image_width, image_height, filename, scene };
 
