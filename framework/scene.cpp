@@ -18,6 +18,7 @@
 #include "glm/gtx/intersect.hpp"
 #include <limits>
 #include <math.h>
+#include <filesystem>
 
 
 
@@ -297,7 +298,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth, bool is_entry) const {
-    const int MAX_RECURSION_DEPTH=1;
+    const int MAX_RECURSION_DEPTH=3;
     if (depth > MAX_RECURSION_DEPTH) { // Define a max recursion depth, e.g., 5 or 10
         return Color{0.5f, 0.5f, 0.5f}; // Return no contribution if depth is exceeded
     }
@@ -346,7 +347,7 @@ Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth,
             }
         }
 
-        if (closest_hit.success && depth < 5) {
+        if (closest_hit.success) {
             if (closest_hit.name_intersected_obj == hit_point.name_intersected_obj) {
                 closest_hit.normale = -closest_hit.normale;
                 is_entry = false;
@@ -453,8 +454,20 @@ glm::vec3 const& Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 c
     return v + perpendicular;
 }
 
-
-
+void Scene::generate_animation_files() const {
+    std::string const dir_path = "C:/Anya Programming/test_dir/";
+    if (!std::filesystem::create_directory(dir_path)) {
+        std::filesystem::remove_all(dir_path);
+        std::filesystem::create_directory(dir_path);
+    }
+    
+    for (int i = 0; i < 5; ++i) {
+        std::ofstream test_file;
+        test_file.open(dir_path + "image" + std::to_string(i) + ".sdf");
+        test_file << "Test file number " << i << "\n";
+        test_file.close();
+    }
+}
 
 unsigned int Scene::get_x_res() {
     return x_res_;
