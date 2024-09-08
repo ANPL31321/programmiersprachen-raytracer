@@ -3,7 +3,6 @@
 #include "scene.hpp"
 #include "vector"
 #include <glm/glm.hpp>
-#include "composite.hpp"
 
 #include <iostream>
 //file stream for opening files
@@ -18,6 +17,11 @@
 #include "glm/gtx/intersect.hpp"
 #include <limits>
 #include <math.h>
+#include "cylinder.hpp"
+#include "composite.hpp"
+#include "cone.hpp"
+#include "triangle.hpp"
+
 
 
 
@@ -70,7 +74,6 @@ void Scene::load_shape(std::istringstream& line_as_stream) {
             return;
         }
         shapes_.push_back(std::make_shared<Sphere>(Sphere{name,material->second,center,radius}));
-        //shapes_.back()->print(std::cout);
     }
     else if ("box" == token) {
         std::string name;
@@ -99,13 +102,10 @@ void Scene::load_shape(std::istringstream& line_as_stream) {
         std::string composite_name;
         line_as_stream >> composite_name;
 
-        // Create the composite object
         auto composite = std::make_shared<Composite>(composite_name, nullptr);
 
-        // Read the names of the child shapes and add them to the composite
         std::string child_name;
         while (line_as_stream >> child_name) {
-            // Find the child shape by name in the existing vector
             auto it = std::find_if(shapes_.begin(), shapes_.end(),
                                    [&child_name](std::shared_ptr<Shape> const &shape) {
                                        return shape->getName() == child_name;
@@ -119,12 +119,54 @@ void Scene::load_shape(std::istringstream& line_as_stream) {
             }
         }
         shapes_.push_back(composite);
+    } else if ("cone" == token) {
+        std::string name, material_name;
+        glm::vec3 center;
+        float height, radius;
+        line_as_stream >> name >> center.x >> center.y >> center.z >> height >> radius >> material_name;
+
+        auto material = materials_.find(material_name);
+        if (material == materials_.end()) {
+            std::cout << "Material " << material_name << " not found" << std::endl;
+            return;
+        }
+        shapes_.push_back(std::make_shared<Cone>(Cone{name, material->second, center, height, radius}));
+
+    } else if ("cylinder" == token) {
+        std::string name, material_name;
+        glm::vec3 center;
+        float height, radius;
+        line_as_stream >> name >> center.x >> center.y >> center.z >> height >> radius >> material_name;
+
+        auto material = materials_.find(material_name);
+        if (material == materials_.end()) {
+            std::cout << "Material " << material_name << " not found" << std::endl;
+            return;
+        }
+        shapes_.push_back(std::make_shared<Cylinder>(Cylinder{name, material->second, center, radius, height}));
+    } else if ("triangle" == token) {
+        std::string name, material_name;
+        glm::vec3 v0, v1, v2;
+
+
+        line_as_stream >> name
+                       >> v0.x >> v0.y >> v0.z
+                       >> v1.x >> v1.y >> v1.z
+                       >> v2.x >> v2.y >> v2.z
+                       >> material_name;
+
+        auto material = materials_.find(material_name);
+        if (material == materials_.end()) {
+            std::cout << "Material " << material_name << " not found" << std::endl;
+            return;
+        }
+
+        shapes_.push_back(std::make_shared<Triangle>(Triangle{name, material->second, v0, v1, v2}));
     }
     else {
         std::cout << "Unexpected keyword: " << token << std::endl;
     }
 }
-
 
 void Scene::load_light(std::istringstream& line_as_stream) {
     Punktlichquelle lightsource{ "", glm::vec3{0.0f, 0.0f, 0.0f}, Color{0.0f, 0.0f, 0.0f} };
