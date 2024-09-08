@@ -339,7 +339,7 @@ Pixel const& Scene::render_pixel(unsigned int x, unsigned int y) const {
 
 
 Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth, bool is_entry) const {
-    const int MAX_RECURSION_DEPTH=3;
+    const int MAX_RECURSION_DEPTH=10;
     if (depth > MAX_RECURSION_DEPTH) { // Define a max recursion depth, e.g., 5 or 10
         return Color{0.5f, 0.5f, 0.5f}; // Return no contribution if depth is exceeded
     }
@@ -381,7 +381,7 @@ Color const& Scene::compute_secondary_rays(HitPoint const& hit_point, int depth,
 
         for (auto shape : shapes_) {
             HitPoint refracted_hit = shape->intersect(refracred_ray);
-            if (refracted_hit.success) {
+            if (refracted_hit.success && refracted_hit.name_intersected_obj != hit_point.name_intersected_obj) {
                 if (refracted_hit.distance < closest_hit.distance) {
                     closest_hit = refracted_hit;
                 }
