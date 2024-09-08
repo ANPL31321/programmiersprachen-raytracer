@@ -14,12 +14,14 @@
 #include <glm/glm.hpp>
 #include <numbers>
 
+
 int main(int argc, char* argv[]) {
     std::filesystem::path const filepath = "C:/Users/LEGION/OneDrive/Documents/Uni/Software Engeneering/ray_tracer_tests/materials123.sdf";
 
     std::string objects_and_transformations;
     unsigned int image_width;
     unsigned int image_hight;
+
     std::string output_file;
     Camera camera;;
 
