@@ -18,7 +18,6 @@
 #include "glm/gtx/intersect.hpp"
 #include <limits>
 #include <math.h>
-#include <filesystem>
 
 
 
@@ -452,21 +451,6 @@ glm::vec3 const& Scene::compute_reflected_vector(glm::vec3 const& v, glm::vec3 c
     // reflected_ray = ray + perp * 2
     perpendicular *= 2;
     return v + perpendicular;
-}
-
-void Scene::generate_animation_files() const {
-    std::string const dir_path = "C:/Anya Programming/test_dir/";
-    if (!std::filesystem::create_directory(dir_path)) {
-        std::filesystem::remove_all(dir_path);
-        std::filesystem::create_directory(dir_path);
-    }
-    
-    for (int i = 0; i < 5; ++i) {
-        std::ofstream test_file;
-        test_file.open(dir_path + "image" + std::to_string(i) + ".sdf");
-        test_file << "Test file number " << i << "\n";
-        test_file.close();
-    }
 }
 
 unsigned int Scene::get_x_res() {
