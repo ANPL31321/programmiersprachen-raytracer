@@ -12,18 +12,21 @@
 //now single threaded again
 int main(int argc, char* argv[])
 {
-    std::string const dir_path_input = "C:/Anya Programming/test_dir_3/";
-    std::string const dir_path = "../rendered_test_3/";
-    if (!std::filesystem::create_directory(dir_path)) {
-        std::filesystem::remove_all(dir_path);
-        std::filesystem::create_directory(dir_path);
+    std::string const dir_path_input = "C:/Users/LEGION/OneDrive/Documents/Uni/Software Engeneering/ray_tracer_tests/camera_moves_forward.ppm/";
+    std::string const dir_path_output = dir_path_input + "rendered_frames/";
+    if (!std::filesystem::create_directory(dir_path_output)) {
+        std::filesystem::remove_all(dir_path_output);
+        std::filesystem::create_directory(dir_path_output);
     }
     for (auto const& file : std::filesystem::directory_iterator{ dir_path_input }) {
         //std::string const filepath = file.path().string();
+        if (file.is_directory()) {
+            continue;
+        }
         Scene scene{ file.path().string()};
         unsigned const image_width = scene.get_x_res();
         unsigned const image_height = scene.get_y_res();
-        std::string const filename = dir_path + scene.get_output_file();
+        std::string const filename = dir_path_output + scene.get_output_file();
 
         Renderer renderer{ image_width, image_height, filename, scene };
 
