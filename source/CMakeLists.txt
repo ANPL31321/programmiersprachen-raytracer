@@ -28,3 +28,11 @@ target_link_libraries(tests ${FRAMEWORK_NAME} ${LIBRARIES}
   )
 add_dependencies(tests glfw ${FRAMEWORK_NAME} ${COPY_BINARY})
 
+add_executable(animation animation.cpp)
+target_link_libraries(animation ${FRAMEWORK_NAME} ${LIBRARIES}
+  glfw
+  ${GLFW_LIBRARIES}
+  )
+add_dependencies(animation glfw ${FRAMEWORK_NAME} ${COPY_BINARY})
+install(TARGETS animation DESTINATION .)
+
