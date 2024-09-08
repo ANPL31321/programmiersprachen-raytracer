@@ -4,6 +4,8 @@
 #include "camera.hpp"
 #include <glm/glm.hpp>
 #include "ray.hpp"
+#include "glm/detail/func_geometric.hpp"
+#include "glm-0.9.5.3/glm/gtx/transform.hpp"
 
 Ray Camera::transform_camera_rays(Ray const& ray) const {
     // Compute basis vectors
@@ -26,4 +28,15 @@ Ray Camera::transform_camera_rays(Ray const& ray) const {
     glm::vec3 new_direction{mat4 * direction_in_HCS};
 
     return Ray{new_origin, glm::normalize(new_direction)};
+}
+
+void Camera::move_camera(float const rotation_angle) {
+    eye += direction;
+    glm::mat4 rotation_matrix{
+        glm::vec4{std::cos(rotation_angle), -std::sin(rotation_angle), 0.0f, 0.0f},
+        glm::vec4{std::sin(rotation_angle), std::cos(rotation_angle), 0.0f, 0.0f},
+        glm::vec4{0.0f, 0.0f, 1.0f, 0.0f},
+        glm::vec4{0.0f, 0.0f, 0.0f, 1.0f}
+    };
+    up_vector = (glm::vec3)(rotation_matrix * glm::vec4{ up_vector, 1.0f });
 }
