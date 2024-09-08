@@ -14,6 +14,7 @@ struct Camera {
 
     // Correct declaration of the method
     Ray transform_camera_rays(const Ray& ray) const;
+    void move_camera(float const rotation_angle);
 };
 
 #endif // CAMERA_HPP
