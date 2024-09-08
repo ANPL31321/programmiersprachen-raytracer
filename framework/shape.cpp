@@ -20,6 +20,6 @@ std::ostream& operator<<(std::ostream& os, Shape const& s) {
 Shape::~Shape() {
 	//std::cout << "Shape Destruktor Aufruf" << std::endl;
 }
-std::string Shape::getName(){
+std::string Shape::getName() const{
     return name_;
 };

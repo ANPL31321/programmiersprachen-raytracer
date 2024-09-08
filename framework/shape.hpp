@@ -24,7 +24,7 @@ public:
     virtual void translate(float const x, float const y, float const z)=0;
     virtual void rotate(float const angle, float const x, float const y, float const z)=0;
     virtual Ray transform_ray(Ray const& ray)const=0;
-    virtual std::string getName();
+    virtual std::string getName() const;
     virtual glm::vec3 getCenter()const=0;
 protected:
 	std::string name_;
