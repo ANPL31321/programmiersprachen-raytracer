@@ -19,7 +19,6 @@ public:
     void translate(float const x, float const y, float const z) override;
     void rotate(float const angle, float const x, float const y, float const z) override;
     Ray transform_ray(Ray const& ray)const override;
-    std::string getName() const;
     glm::vec3 getCenter()const override;
     void add(std::shared_ptr<Shape> shape);
     void remove(std::shared_ptr<Shape> shape);

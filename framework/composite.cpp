@@ -94,10 +94,6 @@ Ray Composite::transform_ray(Ray const& ray) const {
     }else return ray;
 }
 
-std::string Composite::getName() const {
-    return name_;
-}
-
 
 glm::vec3 Composite::getCenter() const {
     if (children_.empty()) return glm::vec3(0.0f);
